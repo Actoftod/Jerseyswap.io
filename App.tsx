@@ -17,8 +17,8 @@ const SESSION_KEY = 'js_pro_session_v1';
 const SESSION_TIMESTAMP_KEY = 'js_pro_session_ts_v1';
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; 
 
-const ADMIN_EMAIL = 'toddybertoch@gmail.com';
-const ADMIN_PW = 'Godknows57!!';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || '';
 
 // Mock Social Data
 const INITIAL_SOCIAL_SWAPS: SocialSwap[] = [
