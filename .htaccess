@@ -3,8 +3,10 @@
 RewriteEngine On
 RewriteBase /
 
-# Force HTTPS
+# Force HTTPS - with proxy compatibility
 RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteCond %{HTTP:CF-Visitor} !'"scheme":"https"'
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Handle SPA routing - redirect all requests to index.html

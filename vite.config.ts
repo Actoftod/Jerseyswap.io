@@ -18,6 +18,8 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
           'motion-vendor': ['framer-motion'],
+          'ai-vendor': ['@google/generative-ai'],
+          'icons-vendor': ['lucide-react'],
         },
       },
     },

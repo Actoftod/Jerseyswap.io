@@ -6,11 +6,19 @@ export class GeminiService {
 
   constructor() {
     const apiKey = import.meta.env.VITE_API_KEY;
-    if (!apiKey) {
-      console.error('Gemini API key not found');
+    if (!apiKey || apiKey.trim().length === 0) {
+      console.error('Gemini API key not found or empty');
       this.genAI = null;
       return;
     }
+    
+    // Basic format validation for Google API keys
+    if (!apiKey.startsWith('AI') || apiKey.length < 20) {
+      console.error('Gemini API key appears to be invalid (should start with "AI" and be at least 20 characters)');
+      this.genAI = null;
+      return;
+    }
+    
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
   }
