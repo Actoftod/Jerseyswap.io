@@ -9,13 +9,7 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: false,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    },
+    minify: 'esbuild',
     rollupOptions: {
       input: {
         main: './index.html',
@@ -32,11 +26,5 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true
-  },
-  define: {
-    'import.meta.env.VITE_API_KEY': JSON.stringify(process.env.VITE_API_KEY || ''),
-    'import.meta.env.VITE_ADMIN_EMAIL': JSON.stringify(process.env.VITE_ADMIN_EMAIL || ''),
-    'import.meta.env.VITE_ADMIN_PASSWORD': JSON.stringify(process.env.VITE_ADMIN_PASSWORD || ''),
-    'import.meta.env.VITE_APP_URL': JSON.stringify(process.env.VITE_APP_URL || '')
   }
 });
