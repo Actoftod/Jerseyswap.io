@@ -1,16 +1,23 @@
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, Suspense, lazy } from 'react';
 import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, Comment } from './types';
 import { TEAMS, LEAGUES } from './constants';
 import { GeminiService } from './services/geminiService';
-import PlayerCard from './components/PlayerCard';
-import PhotoEditor from './components/PhotoEditor';
-import AILab from './components/AILab';
-import OnboardingFlow from './components/OnboardingFlow';
-import ProfileView from './components/ProfileView';
-import { SocialFeed } from './components/SocialFeed';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Sword, Globe } from 'lucide-react';
+
+const PlayerCard = lazy(() => import('./components/PlayerCard'));
+const PhotoEditor = lazy(() => import('./components/PhotoEditor'));
+const AILab = lazy(() => import('./components/AILab'));
+const OnboardingFlow = lazy(() => import('./components/OnboardingFlow'));
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const SocialFeed = lazy(() => import('./components/SocialFeed'));
+
+const LoadingFallback = () => (
+  <div className="flex justify-center items-center py-20 w-full h-full">
+    <RotateCcw className="w-8 h-8 text-[#ccff00] animate-spin" />
+  </div>
+);
 
 const STORAGE_ACCOUNTS_KEY = 'js_pro_accounts_v1';
 const SESSION_KEY = 'js_pro_session_v1';
@@ -478,16 +485,18 @@ const App: React.FC = () => {
               )}
 
               {step === 'social-feed' && activeProfile && (
-                <SocialFeed 
-                  user={activeProfile}
-                  swaps={socialSwaps}
-                  onLike={handleSocialLike}
-                  onSave={handleSocialSave}
-                  onComment={handleSocialComment}
-                  onRate={handleSocialRate}
-                  onFollow={handleFollowAction}
-                  onViewProfile={handleViewProfile}
-                />
+                <Suspense fallback={<LoadingFallback />}>
+                  <SocialFeed
+                    user={activeProfile}
+                    swaps={socialSwaps}
+                    onLike={handleSocialLike}
+                    onSave={handleSocialSave}
+                    onComment={handleSocialComment}
+                    onRate={handleSocialRate}
+                    onFollow={handleFollowAction}
+                    onViewProfile={handleViewProfile}
+                  />
+                </Suspense>
               )}
 
               {step === 'sport-select' && (
@@ -536,12 +545,14 @@ const App: React.FC = () => {
               )}
 
               {step === 'customize' && state.image && (
-                <PhotoEditor 
-                  image={state.image} teams={TEAMS.filter(t => t.leagueId === state.league?.id)} selectedTeam={state.team} onTeamSelect={(t) => setState(p => ({ ...p, team: t }))}
-                  number={state.number} onNumberChange={(n) => setState(p => ({ ...p, number: n }))} removeBackground={state.removeBackground} onToggleBackground={() => setState(p => ({ ...p, removeBackground: !p.removeBackground }))}
-                  onSwap={handleSwap} isProcessing={isLoading}
-                  customPrompt={state.customPrompt} onCustomPromptChange={(cp) => setState(p => ({ ...p, customPrompt: cp }))}
-                />
+                <Suspense fallback={<LoadingFallback />}>
+                  <PhotoEditor
+                    image={state.image} teams={TEAMS.filter(t => t.leagueId === state.league?.id)} selectedTeam={state.team} onTeamSelect={(t) => setState(p => ({ ...p, team: t }))}
+                    number={state.number} onNumberChange={(n) => setState(p => ({ ...p, number: n }))} removeBackground={state.removeBackground} onToggleBackground={() => setState(p => ({ ...p, removeBackground: !p.removeBackground }))}
+                    onSwap={handleSwap} isProcessing={isLoading}
+                    customPrompt={state.customPrompt} onCustomPromptChange={(cp) => setState(p => ({ ...p, customPrompt: cp }))}
+                  />
+                </Suspense>
               )}
 
               {step === 'result' && resultImage && (
@@ -562,19 +573,29 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {step === 'onboarding' && <OnboardingFlow onComplete={handleOnboardingComplete} />}
-              {step === 'profile' && activeProfile && (
-                <ProfileView 
-                  profile={viewingProfile || activeProfile} 
-                  isOwnProfile={!viewingProfile || viewingProfile.id === activeProfile.id}
-                  currentUser={activeProfile}
-                  onBack={() => { setViewingProfile(null); setStep('social-feed'); }} 
-                  onUpdate={(p) => syncProfiles(profiles.map(pr => pr.id === p.id ? p : pr))}
-                  onFollow={handleFollowAction}
-                  followingProfiles={profiles.filter(p => (viewingProfile || activeProfile).followingIds?.includes(p.id))}
-                />
+              {step === 'onboarding' && (
+                <Suspense fallback={<LoadingFallback />}>
+                  <OnboardingFlow onComplete={handleOnboardingComplete} />
+                </Suspense>
               )}
-              {showAILab && <AILab />}
+              {step === 'profile' && activeProfile && (
+                <Suspense fallback={<LoadingFallback />}>
+                  <ProfileView
+                    profile={viewingProfile || activeProfile}
+                    isOwnProfile={!viewingProfile || viewingProfile.id === activeProfile.id}
+                    currentUser={activeProfile}
+                    onBack={() => { setViewingProfile(null); setStep('social-feed'); }}
+                    onUpdate={(p) => syncProfiles(profiles.map(pr => pr.id === p.id ? p : pr))}
+                    onFollow={handleFollowAction}
+                    followingProfiles={profiles.filter(p => (viewingProfile || activeProfile).followingIds?.includes(p.id))}
+                  />
+                </Suspense>
+              )}
+              {showAILab && (
+                <Suspense fallback={<LoadingFallback />}>
+                  <AILab />
+                </Suspense>
+              )}
             </AnimatePresence>
           </main>
 
@@ -593,7 +614,9 @@ const App: React.FC = () => {
       )}
 
       {showPlayerCard && resultImage && playerData && activeProfile && (
-        <PlayerCard image={resultImage} name={activeProfile.name} team={state.team?.name || ''} number={state.number} background={playerData.background} highlights={playerData.highlights} stats={playerData.stats} onClose={() => setShowPlayerCard(false)} />
+        <Suspense fallback={<LoadingFallback />}>
+          <PlayerCard image={resultImage} name={activeProfile.name} team={state.team?.name || ''} number={state.number} background={playerData.background} highlights={playerData.highlights} stats={playerData.stats} onClose={() => setShowPlayerCard(false)} />
+        </Suspense>
       )}
     </div>
   );

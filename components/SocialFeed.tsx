@@ -85,3 +85,5 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({
     </div>
   );
 };
+
+export default SocialFeed;
