@@ -95,9 +95,24 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedProfiles = localStorage.getItem(STORAGE_ACCOUNTS_KEY);
     let currentProfiles = INITIAL_PROFILES;
+
     if (savedProfiles) {
-      currentProfiles = JSON.parse(savedProfiles);
-      setProfiles(currentProfiles);
+      try {
+        const parsed: UserProfile[] = JSON.parse(savedProfiles);
+        // Merge initial profiles if they are missing from saved data
+        const merged = [...parsed];
+        INITIAL_PROFILES.forEach(init => {
+          if (!merged.find(p => p.id === init.id)) {
+            merged.push(init);
+          }
+        });
+        currentProfiles = merged;
+        setProfiles(currentProfiles);
+      } catch (e) {
+        console.error('Failed to parse saved profiles', e);
+        // Fallback to initial profiles if parse fails
+        setProfiles(INITIAL_PROFILES);
+      }
     }
     
     const sessionId = localStorage.getItem(SESSION_KEY);
