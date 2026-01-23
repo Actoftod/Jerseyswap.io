@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, Comment } from './types';
 import { TEAMS, LEAGUES } from './constants';
 import { GeminiService } from './services/geminiService';
@@ -80,10 +80,10 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const geminiService = useRef(new GeminiService());
 
-  const showToast = (type: 'success' | 'error', message: string) => {
+  const showToast = useCallback((type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
-  };
+  }, []);
 
   useEffect(() => {
     const savedProfiles = localStorage.getItem(STORAGE_ACCOUNTS_KEY);
@@ -110,7 +110,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const syncProfiles = (updated: UserProfile[]) => {
+  const syncProfiles = useCallback((updated: UserProfile[]) => {
     setProfiles(updated);
     localStorage.setItem(STORAGE_ACCOUNTS_KEY, JSON.stringify(updated));
     if (activeProfile) {
@@ -121,7 +121,7 @@ const App: React.FC = () => {
       const refreshedViewing = updated.find(p => p.id === viewingProfile.id);
       if (refreshedViewing) setViewingProfile(refreshedViewing);
     }
-  };
+  }, [activeProfile, viewingProfile]);
 
   const loginProfile = (p: UserProfile) => {
     setIsAuthLoading(true);
@@ -311,7 +311,7 @@ const App: React.FC = () => {
     showToast('success', 'RATING_COMMITTED');
   };
 
-  const handleFollowAction = (userId: string) => {
+  const handleFollowAction = useCallback((userId: string) => {
     if (!activeProfile) return;
     const following = activeProfile.followingIds || [];
     const isFollowing = following.includes(userId);
@@ -324,7 +324,7 @@ const App: React.FC = () => {
     
     syncProfiles(updatedProfiles);
     showToast('success', isFollowing ? 'SYNC_DETACHED' : 'NEURAL_SYNC_ESTABLISHED');
-  };
+  }, [activeProfile, profiles, syncProfiles, showToast]);
 
   const handleViewProfile = (userId: string) => {
     const targetProfile = profiles.find(p => p.id === userId);
@@ -362,6 +362,19 @@ const App: React.FC = () => {
     { id: 'hockey', name: 'HOCKEY', icon: Disc, color: '#0061AC', leagues: ['nhl', 'ea_nhl'] },
     { id: 'gaming', name: 'GAMING HUB', icon: Sword, color: '#ccff00', leagues: ['nfl_madden', 'ea_cfb', 'nba_2k', 'the_show', 'fifa_fc', 'ea_nhl'] },
   ];
+
+  const handleBack = useCallback(() => {
+    setViewingProfile(null);
+    setStep('social-feed');
+  }, []);
+
+  const handleProfileUpdate = useCallback((p: UserProfile) => {
+    syncProfiles(profiles.map(pr => pr.id === p.id ? p : pr));
+  }, [profiles, syncProfiles]);
+
+  const filteredFollowingProfiles = useMemo(() => {
+    return profiles.filter(p => (viewingProfile || activeProfile)?.followingIds?.includes(p.id));
+  }, [profiles, viewingProfile, activeProfile]);
 
   return (
     <div className="min-h-screen flex flex-col items-center safe-top safe-bottom">
@@ -454,10 +467,10 @@ const App: React.FC = () => {
               <span className="font-oswald italic font-black text-sm tracking-tighter uppercase">JERSEY<span className="text-[#ccff00]">SWAP</span></span>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setStep('social-feed')} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
-              <button onClick={() => setShowAILab(!showAILab)} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
-              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
-              <button onClick={logout} className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
+              <button onClick={() => setStep('social-feed')} aria-label="Social Feed" className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
+              <button onClick={() => setShowAILab(!showAILab)} aria-label="AI Lab" className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
+              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} aria-label="Profile" className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
+              <button onClick={logout} aria-label="Logout" className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
             </div>
           </header>
 
@@ -568,10 +581,10 @@ const App: React.FC = () => {
                   profile={viewingProfile || activeProfile} 
                   isOwnProfile={!viewingProfile || viewingProfile.id === activeProfile.id}
                   currentUser={activeProfile}
-                  onBack={() => { setViewingProfile(null); setStep('social-feed'); }} 
-                  onUpdate={(p) => syncProfiles(profiles.map(pr => pr.id === p.id ? p : pr))}
+                  onBack={handleBack}
+                  onUpdate={handleProfileUpdate}
                   onFollow={handleFollowAction}
-                  followingProfiles={profiles.filter(p => (viewingProfile || activeProfile).followingIds?.includes(p.id))}
+                  followingProfiles={filteredFollowingProfiles}
                 />
               )}
               {showAILab && <AILab />}

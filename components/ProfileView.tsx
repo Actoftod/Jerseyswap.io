@@ -87,4 +87,4 @@ const ProfileView: React.FC<ProfileViewProps> = ({
   );
 };
 
-export default ProfileView;
+export default React.memo(ProfileView);
