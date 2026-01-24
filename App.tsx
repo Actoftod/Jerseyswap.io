@@ -80,10 +80,10 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const geminiService = useRef(new GeminiService());
 
-  const showToast = (type: 'success' | 'error', message: string) => {
+  const showToast = useCallback((type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
-  };
+  }, []);
 
   useEffect(() => {
     const savedProfiles = localStorage.getItem(STORAGE_ACCOUNTS_KEY);
@@ -110,7 +110,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const syncProfiles = (updated: UserProfile[]) => {
+  const syncProfiles = useCallback((updated: UserProfile[]) => {
     setProfiles(updated);
     localStorage.setItem(STORAGE_ACCOUNTS_KEY, JSON.stringify(updated));
     if (activeProfile) {
@@ -121,7 +121,7 @@ const App: React.FC = () => {
       const refreshedViewing = updated.find(p => p.id === viewingProfile.id);
       if (refreshedViewing) setViewingProfile(refreshedViewing);
     }
-  };
+  }, [activeProfile, viewingProfile]);
 
   const loginProfile = (p: UserProfile) => {
     setIsAuthLoading(true);
@@ -260,16 +260,16 @@ const App: React.FC = () => {
     }, 800);
   };
 
-  const handleSocialLike = (id: string) => {
+  const handleSocialLike = useCallback((id: string) => {
     setSocialSwaps(prev => prev.map(s => s.id === id ? { ...s, likes: s.hasLiked ? s.likes - 1 : s.likes + 1, hasLiked: !s.hasLiked } : s));
-  };
+  }, []);
 
-  const handleSocialSave = (id: string) => {
+  const handleSocialSave = useCallback((id: string) => {
     setSocialSwaps(prev => prev.map(s => s.id === id ? { ...s, isSaved: !s.isSaved } : s));
     showToast('success', 'VAULT_UPDATED');
-  };
+  }, [showToast]);
 
-  const handleSocialComment = (swapId: string, text: string, parentId?: string) => {
+  const handleSocialComment = useCallback((swapId: string, text: string, parentId?: string) => {
     if (!activeProfile) return;
     const newComment: Comment = {
       id: Date.now().toString(),
@@ -298,9 +298,9 @@ const App: React.FC = () => {
       
       return { ...s, comments: [newComment, ...s.comments] };
     }));
-  };
+  }, [activeProfile]);
 
-  const handleSocialRate = (id: string, rating: number) => {
+  const handleSocialRate = useCallback((id: string, rating: number) => {
     setSocialSwaps(prev => prev.map(s => {
       if (s.id === id) {
         const newRating = (s.rating * s.ratingCount + rating) / (s.ratingCount + 1);
@@ -309,9 +309,9 @@ const App: React.FC = () => {
       return s;
     }));
     showToast('success', 'RATING_COMMITTED');
-  };
+  }, [showToast]);
 
-  const handleFollowAction = (userId: string) => {
+  const handleFollowAction = useCallback((userId: string) => {
     if (!activeProfile) return;
     const following = activeProfile.followingIds || [];
     const isFollowing = following.includes(userId);
@@ -324,15 +324,15 @@ const App: React.FC = () => {
     
     syncProfiles(updatedProfiles);
     showToast('success', isFollowing ? 'SYNC_DETACHED' : 'NEURAL_SYNC_ESTABLISHED');
-  };
+  }, [activeProfile, profiles, syncProfiles, showToast]);
 
-  const handleViewProfile = (userId: string) => {
+  const handleViewProfile = useCallback((userId: string) => {
     const targetProfile = profiles.find(p => p.id === userId);
     if (targetProfile) {
       setViewingProfile(targetProfile);
       setStep('profile');
     }
-  };
+  }, [profiles]);
 
   const handleOnboardingComplete = (onboardingData: Partial<UserProfile>) => {
     const newProfile: UserProfile = {
