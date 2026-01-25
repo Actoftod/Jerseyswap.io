@@ -42,6 +42,7 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({
                 )}
                 <div className="flex-1">
                   <button
+                    aria-label={`View ${swap.userName}'s profile`}
                     onClick={() => onViewProfile(swap.userId)}
                     className="font-bold text-white hover:text-[#ccff00] transition-colors"
                   >
@@ -57,6 +58,7 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button
+                      aria-label={`${swap.hasLiked ? 'Unlike' : 'Like'} swap. ${swap.likes} likes`}
                       onClick={() => onLike(swap.id)}
                       className={`flex items-center gap-2 ${swap.hasLiked ? 'text-[#ccff00]' : 'text-white'}`}
                     >
@@ -64,6 +66,7 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({
                       <span>{swap.likes}</span>
                     </button>
                     <button
+                      aria-label={swap.isSaved ? 'Remove from vault' : 'Save to vault'}
                       onClick={() => onSave(swap.id)}
                       className={swap.isSaved ? 'text-[#ccff00]' : 'text-white'}
                     >
