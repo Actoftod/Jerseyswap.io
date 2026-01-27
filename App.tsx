@@ -454,10 +454,10 @@ const App: React.FC = () => {
               <span className="font-oswald italic font-black text-sm tracking-tighter uppercase">JERSEY<span className="text-[#ccff00]">SWAP</span></span>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setStep('social-feed')} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
-              <button onClick={() => setShowAILab(!showAILab)} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
-              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
-              <button onClick={logout} className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
+              <button onClick={() => setStep('social-feed')} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`} aria-label="Social Feed" title="Social Feed"><Globe className="w-5 h-5" /></button>
+              <button onClick={() => setShowAILab(!showAILab)} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`} aria-label="AI Lab" title="AI Lab"><Cpu className="w-5 h-5" /></button>
+              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`} aria-label="My Profile" title="My Profile"><LayoutGrid className="w-5 h-5" /></button>
+              <button onClick={logout} className="p-2 text-zinc-700 hover:text-red-500" aria-label="Logout" title="Logout"><LogOut className="w-5 h-5" /></button>
             </div>
           </header>
 
@@ -527,7 +527,14 @@ const App: React.FC = () => {
               {step === 'upload' && (
                  <div className="flex flex-col items-center py-10">
                    <h2 className="font-oswald italic font-black text-4xl uppercase mb-12">SOURCE_PLATE</h2>
-                   <div onClick={() => fileInputRef.current?.click()} className="w-full max-w-sm aspect-square glass rounded-[3.5rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-6 hover:border-[#ccff00]/40 cursor-pointer shadow-2xl">
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && fileInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Upload photo"
+                      className="w-full max-w-sm aspect-square glass rounded-[3.5rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-6 hover:border-[#ccff00]/40 cursor-pointer shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ccff00]"
+                    >
                      <Zap className="w-12 h-12 text-[#ccff00]" />
                      <span className="font-oswald italic font-black text-2xl uppercase">UPLOAD_PHOTO</span>
                    </div>
@@ -548,7 +555,7 @@ const App: React.FC = () => {
                 <div className="flex flex-col items-center pb-24">
                   <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm aspect-[3/4] glass rounded-[3.5rem] overflow-hidden border border-white/10 relative mb-12">
                      <img src={resultImage} className="w-full h-full object-cover" />
-                     <button onClick={() => window.open(resultImage, '_blank')} className="absolute bottom-8 right-8 w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-2xl">
+                     <button onClick={() => window.open(resultImage, '_blank')} className="absolute bottom-8 right-8 w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-2xl" aria-label="Download result" title="Download result">
                        <Download className="w-7 h-7" />
                      </button>
                   </motion.div>
@@ -584,6 +591,8 @@ const App: React.FC = () => {
               <button 
                 onClick={reset}
                 className="w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(204,255,0,0.4)] hover:scale-110 active:scale-90 transition-all"
+                aria-label="Reset"
+                title="Reset"
               >
                 <Zap className="w-8 h-8 fill-current" />
               </button>
