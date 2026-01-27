@@ -1,15 +1,24 @@
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, Comment } from './types';
 import { TEAMS, LEAGUES } from './constants';
 import { GeminiService } from './services/geminiService';
-import PlayerCard from './components/PlayerCard';
-import PhotoEditor from './components/PhotoEditor';
-import AILab from './components/AILab';
-import OnboardingFlow from './components/OnboardingFlow';
-import ProfileView from './components/ProfileView';
-import { SocialFeed } from './components/SocialFeed';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Lazy loaded components for performance
+const PlayerCard = lazy(() => import('./components/PlayerCard'));
+const PhotoEditor = lazy(() => import('./components/PhotoEditor'));
+const AILab = lazy(() => import('./components/AILab'));
+const OnboardingFlow = lazy(() => import('./components/OnboardingFlow'));
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const SocialFeed = lazy(() => import('./components/SocialFeed').then(module => ({ default: module.SocialFeed })));
+
+const LoadingFallback = () => (
+  <div className="flex flex-col items-center justify-center min-h-[50vh] w-full">
+    <div className="w-12 h-12 border-4 border-[#ccff00] border-t-transparent rounded-full animate-spin"></div>
+    <p className="mt-4 font-oswald italic text-zinc-500 uppercase tracking-widest text-xs">LOADING_MODULE</p>
+  </div>
+);
 import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Sword, Globe } from 'lucide-react';
 
 const STORAGE_ACCOUNTS_KEY = 'js_pro_accounts_v1';
@@ -462,8 +471,9 @@ const App: React.FC = () => {
           </header>
 
           <main className="flex-1 w-full pt-20 relative z-10 px-4">
-            <AnimatePresence mode="wait">
-              {step === 'processing' && (
+            <Suspense fallback={<LoadingFallback />}>
+              <AnimatePresence mode="wait">
+                {step === 'processing' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center overflow-hidden">
                   <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale contrast-150">
                     <source src="https://storage.googleapis.com/jerseyswap/uploads/dark_clouds_with_lightning.mp4" type="video/mp4" />
@@ -574,8 +584,9 @@ const App: React.FC = () => {
                   followingProfiles={profiles.filter(p => (viewingProfile || activeProfile).followingIds?.includes(p.id))}
                 />
               )}
-              {showAILab && <AILab />}
-            </AnimatePresence>
+                {showAILab && <AILab />}
+              </AnimatePresence>
+            </Suspense>
           </main>
 
           {/* Fab Navigation */}
@@ -593,7 +604,9 @@ const App: React.FC = () => {
       )}
 
       {showPlayerCard && resultImage && playerData && activeProfile && (
-        <PlayerCard image={resultImage} name={activeProfile.name} team={state.team?.name || ''} number={state.number} background={playerData.background} highlights={playerData.highlights} stats={playerData.stats} onClose={() => setShowPlayerCard(false)} />
+        <Suspense fallback={<div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center"><LoadingFallback /></div>}>
+          <PlayerCard image={resultImage} name={activeProfile.name} team={state.team?.name || ''} number={state.number} background={playerData.background} highlights={playerData.highlights} stats={playerData.stats} onClose={() => setShowPlayerCard(false)} />
+        </Suspense>
       )}
     </div>
   );
