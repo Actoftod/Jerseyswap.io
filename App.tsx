@@ -412,8 +412,8 @@ const App: React.FC = () => {
               {authMode === 'signin' && (
                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                    <div className="space-y-4">
-                     <input placeholder="EMAIL_ADDRESS" value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 font-oswald italic text-white outline-none" />
-                     <input type="password" placeholder="PASSWORD" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 font-oswald italic text-white outline-none" />
+                     <input aria-label="Email Address" placeholder="EMAIL_ADDRESS" value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 font-oswald italic text-white outline-none" />
+                     <input aria-label="Password" type="password" placeholder="PASSWORD" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 font-oswald italic text-white outline-none" />
                    </div>
                    <button onClick={handleSignIn} disabled={isAuthLoading} className="w-full py-5 bg-[#ccff00] text-black font-oswald italic font-black text-xl rounded-2xl">
                      {isAuthLoading ? <RotateCcw className="w-6 h-6 animate-spin" /> : 'AUTHORIZE'}
@@ -425,10 +425,10 @@ const App: React.FC = () => {
               {authMode === 'signup' && (
                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
                    <div className="space-y-3">
-                     <input placeholder="FULL_NAME" value={authName} onChange={e => setAuthName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
-                     <input placeholder="EMAIL" value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
-                     <input placeholder="@HANDLE" value={authHandle} onChange={e => setAuthHandle(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
-                     <input type="password" placeholder="PASSWORD" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
+                     <input aria-label="Full Name" placeholder="FULL_NAME" value={authName} onChange={e => setAuthName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
+                     <input aria-label="Email Address" placeholder="EMAIL" value={authEmail} onChange={e => setAuthEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
+                     <input aria-label="Handle" placeholder="@HANDLE" value={authHandle} onChange={e => setAuthHandle(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
+                     <input aria-label="Password" type="password" placeholder="PASSWORD" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
                    </div>
                    <button onClick={() => setAuthMode('2fa')} className="w-full py-5 bg-[#ccff00] text-black font-oswald italic font-black text-xl rounded-2xl">INIT_ONBOARDING</button>
                    <button onClick={() => setAuthMode('select')} className="w-full py-2 text-zinc-600 font-oswald italic text-[10px] uppercase">BACK</button>
@@ -439,7 +439,7 @@ const App: React.FC = () => {
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-6">
                   <ShieldCheck className="w-12 h-12 text-[#ccff00] mx-auto mb-4" />
                   <h2 className="font-oswald italic font-black text-2xl text-white uppercase">VERIFICATION</h2>
-                  <input value={twoFACode} onChange={e => setTwoFACode(e.target.value.slice(0,4))} type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 text-center text-4xl font-oswald italic font-black text-[#ccff00]" placeholder="1234" />
+                  <input aria-label="Two-factor authentication code" value={twoFACode} onChange={e => setTwoFACode(e.target.value.slice(0,4))} type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 text-center text-4xl font-oswald italic font-black text-[#ccff00]" placeholder="1234" />
                   <button onClick={verify2FA} className="w-full py-5 bg-[#ccff00] text-black font-oswald italic font-black text-xl rounded-2xl uppercase">VERIFY</button>
                 </motion.div>
               )}
@@ -449,15 +449,15 @@ const App: React.FC = () => {
       ) : (
         <div className="w-full flex flex-col items-center">
           <header className="fixed top-0 inset-x-0 z-[100] bg-black/60 backdrop-blur-2xl border-b border-white/5 px-6 h-14 flex items-center justify-between">
-            <div onClick={reset} className="flex items-center gap-2 cursor-pointer">
+            <button onClick={reset} aria-label="Home" className="flex items-center gap-2 cursor-pointer bg-transparent border-none">
               <Zap className="w-5 h-5 text-[#ccff00] fill-current" />
               <span className="font-oswald italic font-black text-sm tracking-tighter uppercase">JERSEY<span className="text-[#ccff00]">SWAP</span></span>
-            </div>
+            </button>
             <div className="flex gap-2">
-              <button onClick={() => setStep('social-feed')} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
-              <button onClick={() => setShowAILab(!showAILab)} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
-              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
-              <button onClick={logout} className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
+              <button onClick={() => setStep('social-feed')} aria-label="Social Feed" title="Social Feed" className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
+              <button onClick={() => setShowAILab(!showAILab)} aria-label="AI Lab" title="AI Lab" className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
+              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} aria-label="My Profile" title="My Profile" className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
+              <button onClick={logout} aria-label="Logout" title="Logout" className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
             </div>
           </header>
 
