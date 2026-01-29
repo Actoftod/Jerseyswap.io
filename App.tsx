@@ -1,15 +1,16 @@
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, Comment } from './types';
 import { TEAMS, LEAGUES } from './constants';
 import { GeminiService } from './services/geminiService';
-import PlayerCard from './components/PlayerCard';
-import PhotoEditor from './components/PhotoEditor';
-import AILab from './components/AILab';
-import OnboardingFlow from './components/OnboardingFlow';
-import ProfileView from './components/ProfileView';
-import { SocialFeed } from './components/SocialFeed';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const PlayerCard = lazy(() => import('./components/PlayerCard'));
+const PhotoEditor = lazy(() => import('./components/PhotoEditor'));
+const AILab = lazy(() => import('./components/AILab'));
+const OnboardingFlow = lazy(() => import('./components/OnboardingFlow'));
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const SocialFeed = lazy(() => import('./components/SocialFeed').then(module => ({ default: module.SocialFeed })));
 import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Sword, Globe } from 'lucide-react';
 
 const STORAGE_ACCOUNTS_KEY = 'js_pro_accounts_v1';
@@ -43,6 +44,15 @@ const INITIAL_SOCIAL_SWAPS: SocialSwap[] = [
 const INITIAL_PROFILES: UserProfile[] = [
   { id: 'a1', name: 'KYLE SMITH', email: 'kyle@nike.com', handle: '@KYLE_DESIGN', role: 'Pro Designer', leaguePreference: 'NFL', bio: 'Visualizing the future of sports.', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200', stats: { precision: 95, sync: 88, speed: 92 }, ovr: 94, vault: [], followingIds: [] },
   { id: 'a2', name: 'JORDAN VILLA', email: 'jordan@ea.com', handle: '@JV_KITS', role: 'Pro Designer', leaguePreference: 'NBA', bio: 'EA Sports kit architect.', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200', stats: { precision: 90, sync: 94, speed: 85 }, ovr: 91, vault: [], followingIds: [] }
+];
+
+const sports = [
+  { id: 'football', name: 'FOOTBALL', icon: Trophy, color: '#ccff00', leagues: ['nfl', 'nfl_madden', 'ncaa_fb', 'ea_cfb'] },
+  { id: 'basketball', name: 'BASKETBALL', icon: Target, color: '#17408B', leagues: ['nba', 'nba_2k', 'ncaa_bb'] },
+  { id: 'baseball', name: 'BASEBALL', icon: Disc, color: '#E31937', leagues: ['mlb', 'the_show'] },
+  { id: 'soccer', name: 'SOCCER', icon: Activity, color: '#ffffff', leagues: ['mls', 'fifa_fc', 'world_soccer'] },
+  { id: 'hockey', name: 'HOCKEY', icon: Disc, color: '#0061AC', leagues: ['nhl', 'ea_nhl'] },
+  { id: 'gaming', name: 'GAMING HUB', icon: Sword, color: '#ccff00', leagues: ['nfl_madden', 'ea_cfb', 'nba_2k', 'the_show', 'fifa_fc', 'ea_nhl'] },
 ];
 
 const App: React.FC = () => {
@@ -354,14 +364,11 @@ const App: React.FC = () => {
     loginProfile(newProfile);
   };
 
-  const sports = [
-    { id: 'football', name: 'FOOTBALL', icon: Trophy, color: '#ccff00', leagues: ['nfl', 'nfl_madden', 'ncaa_fb', 'ea_cfb'] },
-    { id: 'basketball', name: 'BASKETBALL', icon: Target, color: '#17408B', leagues: ['nba', 'nba_2k', 'ncaa_bb'] },
-    { id: 'baseball', name: 'BASEBALL', icon: Disc, color: '#E31937', leagues: ['mlb', 'the_show'] },
-    { id: 'soccer', name: 'SOCCER', icon: Activity, color: '#ffffff', leagues: ['mls', 'fifa_fc', 'world_soccer'] },
-    { id: 'hockey', name: 'HOCKEY', icon: Disc, color: '#0061AC', leagues: ['nhl', 'ea_nhl'] },
-    { id: 'gaming', name: 'GAMING HUB', icon: Sword, color: '#ccff00', leagues: ['nfl_madden', 'ea_cfb', 'nba_2k', 'the_show', 'fifa_fc', 'ea_nhl'] },
-  ];
+  const LoadingSpinner = () => (
+    <div className="flex items-center justify-center w-full h-64">
+      <RotateCcw className="w-8 h-8 text-[#ccff00] animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col items-center safe-top safe-bottom">
@@ -462,7 +469,8 @@ const App: React.FC = () => {
           </header>
 
           <main className="flex-1 w-full pt-20 relative z-10 px-4">
-            <AnimatePresence mode="wait">
+            <Suspense fallback={<LoadingSpinner />}>
+              <AnimatePresence mode="wait">
               {step === 'processing' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center overflow-hidden">
                   <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale contrast-150">
@@ -575,7 +583,8 @@ const App: React.FC = () => {
                 />
               )}
               {showAILab && <AILab />}
-            </AnimatePresence>
+              </AnimatePresence>
+            </Suspense>
           </main>
 
           {/* Fab Navigation */}
@@ -593,7 +602,9 @@ const App: React.FC = () => {
       )}
 
       {showPlayerCard && resultImage && playerData && activeProfile && (
-        <PlayerCard image={resultImage} name={activeProfile.name} team={state.team?.name || ''} number={state.number} background={playerData.background} highlights={playerData.highlights} stats={playerData.stats} onClose={() => setShowPlayerCard(false)} />
+        <Suspense fallback={<LoadingSpinner />}>
+          <PlayerCard image={resultImage} name={activeProfile.name} team={state.team?.name || ''} number={state.number} background={playerData.background} highlights={playerData.highlights} stats={playerData.stats} onClose={() => setShowPlayerCard(false)} />
+        </Suspense>
       )}
     </div>
   );
