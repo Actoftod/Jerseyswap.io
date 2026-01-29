@@ -454,10 +454,10 @@ const App: React.FC = () => {
               <span className="font-oswald italic font-black text-sm tracking-tighter uppercase">JERSEY<span className="text-[#ccff00]">SWAP</span></span>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setStep('social-feed')} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
-              <button onClick={() => setShowAILab(!showAILab)} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
-              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
-              <button onClick={logout} className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
+              <button aria-label="Social Feed" onClick={() => setStep('social-feed')} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
+              <button aria-label="AI Lab" onClick={() => setShowAILab(!showAILab)} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
+              <button aria-label="Profile" onClick={() => { setViewingProfile(null); setStep('profile'); }} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
+              <button aria-label="Logout" onClick={logout} className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
             </div>
           </header>
 
@@ -548,7 +548,7 @@ const App: React.FC = () => {
                 <div className="flex flex-col items-center pb-24">
                   <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm aspect-[3/4] glass rounded-[3.5rem] overflow-hidden border border-white/10 relative mb-12">
                      <img src={resultImage} className="w-full h-full object-cover" />
-                     <button onClick={() => window.open(resultImage, '_blank')} className="absolute bottom-8 right-8 w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-2xl">
+                     <button aria-label="Download Image" onClick={() => window.open(resultImage, '_blank')} className="absolute bottom-8 right-8 w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-2xl">
                        <Download className="w-7 h-7" />
                      </button>
                   </motion.div>
@@ -582,6 +582,7 @@ const App: React.FC = () => {
           {activeProfile && step !== 'auth' && step !== 'onboarding' && (
             <div className="fixed bottom-8 z-[100] flex gap-4">
               <button 
+                aria-label="Start New Draft"
                 onClick={reset}
                 className="w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(204,255,0,0.4)] hover:scale-110 active:scale-90 transition-all"
               >
