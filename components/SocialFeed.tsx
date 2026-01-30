@@ -1,4 +1,5 @@
 import React from 'react';
+import { Heart, Bookmark } from 'lucide-react';
 import { SocialSwap, UserProfile } from '../types';
 
 interface SocialFeedProps {
@@ -42,6 +43,7 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({
                 )}
                 <div className="flex-1">
                   <button
+                    aria-label={`View profile of ${swap.userName}`}
                     onClick={() => onViewProfile(swap.userId)}
                     className="font-bold text-white hover:text-[#ccff00] transition-colors"
                   >
@@ -57,17 +59,19 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button
+                      aria-label={swap.hasLiked ? "Unlike swap" : "Like swap"}
                       onClick={() => onLike(swap.id)}
                       className={`flex items-center gap-2 ${swap.hasLiked ? 'text-[#ccff00]' : 'text-white'}`}
                     >
-                      <span>❤</span>
+                      <Heart className={`w-6 h-6 ${swap.hasLiked ? 'fill-current' : ''}`} />
                       <span>{swap.likes}</span>
                     </button>
                     <button
+                      aria-label={swap.isSaved ? "Remove from vault" : "Save to vault"}
                       onClick={() => onSave(swap.id)}
                       className={swap.isSaved ? 'text-[#ccff00]' : 'text-white'}
                     >
-                      🔖
+                      <Bookmark className={`w-6 h-6 ${swap.isSaved ? 'fill-current' : ''}`} />
                     </button>
                   </div>
                   <span className="text-sm text-zinc-400">★ {swap.rating}</span>
