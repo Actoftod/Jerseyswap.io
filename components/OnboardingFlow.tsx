@@ -24,35 +24,44 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-bold mb-2 uppercase">Name</label>
+            <label htmlFor="onboarding-name" className="block text-sm font-bold mb-2 uppercase">Name</label>
             <input
+              id="onboarding-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full p-4 glass rounded-xl text-white"
               placeholder="Your Name"
+              required
+              autoComplete="name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold mb-2 uppercase">Handle</label>
+            <label htmlFor="onboarding-handle" className="block text-sm font-bold mb-2 uppercase">Handle</label>
             <input
+              id="onboarding-handle"
               type="text"
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
               className="w-full p-4 glass rounded-xl text-white"
               placeholder="@username"
+              required
+              autoComplete="username"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold mb-2 uppercase">Bio</label>
+            <label htmlFor="onboarding-bio" className="block text-sm font-bold mb-2 uppercase">Bio</label>
             <textarea
+              id="onboarding-bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               className="w-full p-4 glass rounded-xl text-white resize-none"
               placeholder="Tell us about yourself..."
               rows={3}
+              required
+              autoComplete="off"
             />
           </div>
 
