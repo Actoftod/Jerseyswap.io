@@ -449,15 +449,15 @@ const App: React.FC = () => {
       ) : (
         <div className="w-full flex flex-col items-center">
           <header className="fixed top-0 inset-x-0 z-[100] bg-black/60 backdrop-blur-2xl border-b border-white/5 px-6 h-14 flex items-center justify-between">
-            <div onClick={reset} className="flex items-center gap-2 cursor-pointer">
+            <button onClick={reset} aria-label="Reset application" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
               <Zap className="w-5 h-5 text-[#ccff00] fill-current" />
               <span className="font-oswald italic font-black text-sm tracking-tighter uppercase">JERSEY<span className="text-[#ccff00]">SWAP</span></span>
-            </div>
+            </button>
             <div className="flex gap-2">
-              <button onClick={() => setStep('social-feed')} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
-              <button onClick={() => setShowAILab(!showAILab)} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
-              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
-              <button onClick={logout} className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
+              <button onClick={() => setStep('social-feed')} aria-label="Social Feed" title="Social Feed" aria-current={step === 'social-feed' ? 'page' : undefined} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
+              <button onClick={() => setShowAILab(!showAILab)} aria-label="Toggle AI Lab" title="AI Lab" aria-pressed={showAILab} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
+              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} aria-label="My Profile" title="My Profile" aria-current={step === 'profile' ? 'page' : undefined} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
+              <button onClick={logout} aria-label="Log Out" title="Log Out" className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
             </div>
           </header>
 
@@ -548,7 +548,7 @@ const App: React.FC = () => {
                 <div className="flex flex-col items-center pb-24">
                   <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm aspect-[3/4] glass rounded-[3.5rem] overflow-hidden border border-white/10 relative mb-12">
                      <img src={resultImage} className="w-full h-full object-cover" />
-                     <button onClick={() => window.open(resultImage, '_blank')} className="absolute bottom-8 right-8 w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-2xl">
+                     <button onClick={() => window.open(resultImage, '_blank')} aria-label="Download Result" title="Download Result" className="absolute bottom-8 right-8 w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-2xl">
                        <Download className="w-7 h-7" />
                      </button>
                   </motion.div>
@@ -583,6 +583,8 @@ const App: React.FC = () => {
             <div className="fixed bottom-8 z-[100] flex gap-4">
               <button 
                 onClick={reset}
+                aria-label="Start New Swap"
+                title="Start New Swap"
                 className="w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(204,255,0,0.4)] hover:scale-110 active:scale-90 transition-all"
               >
                 <Zap className="w-8 h-8 fill-current" />
