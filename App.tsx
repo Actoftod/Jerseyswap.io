@@ -78,7 +78,14 @@ const App: React.FC = () => {
   const [isNeuralForging, setIsNeuralForging] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const geminiService = useRef(new GeminiService());
+
+  // ⚡ Bolt Optimization: Lazy initialization of GeminiService
+  // Previously: useRef(new GeminiService()) caused instantiation on every render
+  const geminiServiceRef = useRef<GeminiService | null>(null);
+  if (!geminiServiceRef.current) {
+    geminiServiceRef.current = new GeminiService();
+  }
+  const geminiService = geminiServiceRef as React.MutableRefObject<GeminiService>;
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
