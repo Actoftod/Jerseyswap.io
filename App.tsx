@@ -45,6 +45,16 @@ const INITIAL_PROFILES: UserProfile[] = [
   { id: 'a2', name: 'JORDAN VILLA', email: 'jordan@ea.com', handle: '@JV_KITS', role: 'Pro Designer', leaguePreference: 'NBA', bio: 'EA Sports kit architect.', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200', stats: { precision: 90, sync: 94, speed: 85 }, ovr: 91, vault: [], followingIds: [] }
 ];
 
+// Optimization: Move constant array outside component to prevent recreation on every render
+const sports = [
+  { id: 'football', name: 'FOOTBALL', icon: Trophy, color: '#ccff00', leagues: ['nfl', 'nfl_madden', 'ncaa_fb', 'ea_cfb'] },
+  { id: 'basketball', name: 'BASKETBALL', icon: Target, color: '#17408B', leagues: ['nba', 'nba_2k', 'ncaa_bb'] },
+  { id: 'baseball', name: 'BASEBALL', icon: Disc, color: '#E31937', leagues: ['mlb', 'the_show'] },
+  { id: 'soccer', name: 'SOCCER', icon: Activity, color: '#ffffff', leagues: ['mls', 'fifa_fc', 'world_soccer'] },
+  { id: 'hockey', name: 'HOCKEY', icon: Disc, color: '#0061AC', leagues: ['nhl', 'ea_nhl'] },
+  { id: 'gaming', name: 'GAMING HUB', icon: Sword, color: '#ccff00', leagues: ['nfl_madden', 'ea_cfb', 'nba_2k', 'the_show', 'fifa_fc', 'ea_nhl'] },
+];
+
 const App: React.FC = () => {
   const [profiles, setProfiles] = useState<UserProfile[]>(INITIAL_PROFILES);
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null);
@@ -78,7 +88,12 @@ const App: React.FC = () => {
   const [isNeuralForging, setIsNeuralForging] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const geminiService = useRef(new GeminiService());
+  const geminiService = useRef<GeminiService | null>(null);
+
+  // Optimization: Lazy initialization to avoid instantiating Service on every render
+  if (!geminiService.current) {
+    geminiService.current = new GeminiService();
+  }
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -205,7 +220,7 @@ const App: React.FC = () => {
         const rawBase64 = reader.result as string;
         setIsPreparingPlate(true);
         try {
-          const preparedPlate = await geminiService.current.prepareAthletePlate(rawBase64);
+          const preparedPlate = await geminiService.current!.prepareAthletePlate(rawBase64);
           setState(prev => ({ ...prev, image: preparedPlate }));
           setStep('customize');
         } catch (err) {
@@ -225,8 +240,8 @@ const App: React.FC = () => {
     setStep('processing');
     try {
       const [result, stats] = await Promise.all([
-        geminiService.current.performJerseySwap(state.image, state.team.name, state.number, state.removeBackground, state.customPrompt),
-        geminiService.current.generatePlayerStats(state.team.name)
+        geminiService.current!.performJerseySwap(state.image, state.team.name, state.number, state.removeBackground, state.customPrompt),
+        geminiService.current!.generatePlayerStats(state.team.name)
       ]);
       setResultImage(result);
       setPlayerData(stats);
@@ -353,15 +368,6 @@ const App: React.FC = () => {
     syncProfiles([...profiles, newProfile]);
     loginProfile(newProfile);
   };
-
-  const sports = [
-    { id: 'football', name: 'FOOTBALL', icon: Trophy, color: '#ccff00', leagues: ['nfl', 'nfl_madden', 'ncaa_fb', 'ea_cfb'] },
-    { id: 'basketball', name: 'BASKETBALL', icon: Target, color: '#17408B', leagues: ['nba', 'nba_2k', 'ncaa_bb'] },
-    { id: 'baseball', name: 'BASEBALL', icon: Disc, color: '#E31937', leagues: ['mlb', 'the_show'] },
-    { id: 'soccer', name: 'SOCCER', icon: Activity, color: '#ffffff', leagues: ['mls', 'fifa_fc', 'world_soccer'] },
-    { id: 'hockey', name: 'HOCKEY', icon: Disc, color: '#0061AC', leagues: ['nhl', 'ea_nhl'] },
-    { id: 'gaming', name: 'GAMING HUB', icon: Sword, color: '#ccff00', leagues: ['nfl_madden', 'ea_cfb', 'nba_2k', 'the_show', 'fifa_fc', 'ea_nhl'] },
-  ];
 
   return (
     <div className="min-h-screen flex flex-col items-center safe-top safe-bottom">
