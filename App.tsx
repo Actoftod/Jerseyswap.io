@@ -78,7 +78,10 @@ const App: React.FC = () => {
   const [isNeuralForging, setIsNeuralForging] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const geminiService = useRef(new GeminiService());
+  const geminiService = useRef<GeminiService | null>(null);
+  if (!geminiService.current) {
+    geminiService.current = new GeminiService();
+  }
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -205,7 +208,7 @@ const App: React.FC = () => {
         const rawBase64 = reader.result as string;
         setIsPreparingPlate(true);
         try {
-          const preparedPlate = await geminiService.current.prepareAthletePlate(rawBase64);
+          const preparedPlate = await geminiService.current!.prepareAthletePlate(rawBase64);
           setState(prev => ({ ...prev, image: preparedPlate }));
           setStep('customize');
         } catch (err) {
@@ -225,8 +228,8 @@ const App: React.FC = () => {
     setStep('processing');
     try {
       const [result, stats] = await Promise.all([
-        geminiService.current.performJerseySwap(state.image, state.team.name, state.number, state.removeBackground, state.customPrompt),
-        geminiService.current.generatePlayerStats(state.team.name)
+        geminiService.current!.performJerseySwap(state.image, state.team.name, state.number, state.removeBackground, state.customPrompt),
+        geminiService.current!.generatePlayerStats(state.team.name)
       ]);
       setResultImage(result);
       setPlayerData(stats);
