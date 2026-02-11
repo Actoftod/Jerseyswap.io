@@ -80,10 +80,10 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const geminiService = useRef(new GeminiService());
 
-  const showToast = (type: 'success' | 'error', message: string) => {
+  const showToast = useCallback((type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
-  };
+  }, []);
 
   useEffect(() => {
     const savedProfiles = localStorage.getItem(STORAGE_ACCOUNTS_KEY);
@@ -260,14 +260,14 @@ const App: React.FC = () => {
     }, 800);
   };
 
-  const handleSocialLike = (id: string) => {
+  const handleSocialLike = useCallback((id: string) => {
     setSocialSwaps(prev => prev.map(s => s.id === id ? { ...s, likes: s.hasLiked ? s.likes - 1 : s.likes + 1, hasLiked: !s.hasLiked } : s));
-  };
+  }, []);
 
-  const handleSocialSave = (id: string) => {
+  const handleSocialSave = useCallback((id: string) => {
     setSocialSwaps(prev => prev.map(s => s.id === id ? { ...s, isSaved: !s.isSaved } : s));
     showToast('success', 'VAULT_UPDATED');
-  };
+  }, [showToast]);
 
   const handleSocialComment = (swapId: string, text: string, parentId?: string) => {
     if (!activeProfile) return;
@@ -326,13 +326,13 @@ const App: React.FC = () => {
     showToast('success', isFollowing ? 'SYNC_DETACHED' : 'NEURAL_SYNC_ESTABLISHED');
   };
 
-  const handleViewProfile = (userId: string) => {
+  const handleViewProfile = useCallback((userId: string) => {
     const targetProfile = profiles.find(p => p.id === userId);
     if (targetProfile) {
       setViewingProfile(targetProfile);
       setStep('profile');
     }
-  };
+  }, [profiles]);
 
   const handleOnboardingComplete = (onboardingData: Partial<UserProfile>) => {
     const newProfile: UserProfile = {
