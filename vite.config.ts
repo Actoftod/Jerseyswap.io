@@ -18,7 +18,7 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
           'motion-vendor': ['framer-motion'],
-          'ai-vendor': ['@google/generative-ai'],
+          'ai-vendor': ['@google/genai'],
           'icons-vendor': ['lucide-react'],
         },
       },
@@ -28,5 +28,8 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true
+  },
+  define: {
+    'process.env.API_KEY': JSON.stringify(process.env.API_KEY)
   }
 });
