@@ -1,119 +1,215 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
+import { SYSTEM_INSTRUCTION } from '../constants';
 
 export class GeminiService {
-  private genAI: GoogleGenerativeAI | null;
-  private model: any;
+  private ai: GoogleGenAI | null = null;
 
   constructor() {
     const apiKey = import.meta.env.VITE_API_KEY;
     if (!apiKey || apiKey.trim().length === 0) {
-      console.error('Gemini API key not found or empty');
-      this.genAI = null;
+      console.error('[GeminiService] API key not found');
       return;
     }
-    
-    // Basic format validation for Google API keys
-    if (!apiKey.startsWith('AI') || apiKey.length < 20) {
-      console.error('Gemini API key appears to be invalid (should start with "AI" and be at least 20 characters)');
-      this.genAI = null;
-      return;
-    }
-    
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    this.ai = new GoogleGenAI({ apiKey });
   }
 
-  async prepareAthletePlate(image: string): Promise<string> {
-    // For now, return the image as-is (placeholder implementation)
-    // In production, this would process/optimize the image
-    return image;
+  private getBase64(dataUrl: string): string {
+    return dataUrl.split(',')[1] ?? dataUrl;
+  }
+
+  private getMimeType(dataUrl: string): string {
+    const match = dataUrl.match(/^data:(image\/\w+);base64,/);
+    return match ? match[1] : 'image/png';
+  }
+
+  async prepareAthletePlate(imageDataUrl: string): Promise<string> {
+    if (!this.ai) return imageDataUrl;
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash-preview-image-generation',
+        contents: [
+          {
+            parts: [
+              { text: 'Optimize this athlete image for jersey swapping: enhance lighting, sharpen details, ensure correct portrait framing. Keep the exact same person and pose. Output a clean high-quality athlete portrait.' },
+              { inlineData: { data: this.getBase64(imageDataUrl), mimeType: this.getMimeType(imageDataUrl) } }
+            ]
+          }
+        ],
+        config: { responseModalities: ['IMAGE', 'TEXT'] }
+      });
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+      if (imagePart?.inlineData?.data) {
+        return `data:${imagePart.inlineData.mimeType ?? 'image/png'};base64,${imagePart.inlineData.data}`;
+      }
+    } catch (err) {
+      console.error('[GeminiService] prepareAthletePlate error:', err);
+    }
+    return imageDataUrl;
   }
 
   async performJerseySwap(
-    image: string,
+    imageDataUrl: string,
     teamName: string,
     number: string,
     removeBackground: boolean,
     customPrompt?: string
   ): Promise<string> {
+    if (!this.ai) return imageDataUrl;
     try {
-      if (!this.genAI) {
-        throw new Error('Gemini service not initialized');
+      const prompt = customPrompt
+        ? `${SYSTEM_INSTRUCTION}\n\nAdditional directive: ${customPrompt}\n\nSwap this athlete into a ${teamName} jersey #${number}.${removeBackground ? ' Remove background, place on clean studio backdrop.' : ''}`
+        : `${SYSTEM_INSTRUCTION}\n\nTransform this athlete to wear the official ${teamName} jersey with number #${number}. IDENTITY_LOCK: preserve exact face and body. Ultra-realistic Nike x Apple aesthetic.${removeBackground ? ' Remove background entirely, pure studio environment.' : ''}`;
+
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash-preview-image-generation',
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              { inlineData: { data: this.getBase64(imageDataUrl), mimeType: this.getMimeType(imageDataUrl) } }
+            ]
+          }
+        ],
+        config: { responseModalities: ['IMAGE', 'TEXT'] }
+      });
+
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+      if (imagePart?.inlineData?.data) {
+        return `data:${imagePart.inlineData.mimeType ?? 'image/png'};base64,${imagePart.inlineData.data}`;
+      }
+    } catch (err) {
+      console.error('[GeminiService] performJerseySwap error:', err);
+    }
+    return imageDataUrl;
+  }
+
+  async performGenerativeEdit(
+    imageDataUrl: string,
+    prompt: string,
+    tool: string,
+    maskDataUrl?: string
+  ): Promise<string> {
+    if (!this.ai) return imageDataUrl;
+    try {
+      const parts: any[] = [
+        { text: `${SYSTEM_INSTRUCTION}\n\nTool: ${tool.toUpperCase()}\nDirective: ${prompt}` },
+        { inlineData: { data: this.getBase64(imageDataUrl), mimeType: this.getMimeType(imageDataUrl) } }
+      ];
+      if (maskDataUrl) {
+        parts.push({ inlineData: { data: this.getBase64(maskDataUrl), mimeType: 'image/png' } });
+        parts[0] = { text: `${parts[0].text}\nApply edit ONLY to white regions of the provided mask.` };
       }
 
-      const prompt = customPrompt || `Transform this athlete image to wear a ${teamName} jersey with number ${number}. ${removeBackground ? 'Remove the background.' : ''} Make it look professional and realistic.`;
-      
-      const imageParts = {
-        inlineData: {
-          data: image.split(',')[1],
-          mimeType: 'image/jpeg',
-        },
-      };
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash-preview-image-generation',
+        contents: [{ parts }],
+        config: { responseModalities: ['IMAGE', 'TEXT'] }
+      });
 
-      const result = await this.model.generateContent([prompt, imageParts]);
-      const response = await result.response;
-      const text = response.text();
-      
-      // For now, return original image as AI image generation isn't directly supported
-      // In production, you'd need to use appropriate image generation API
-      return image;
-    } catch (error) {
-      console.error('Error performing jersey swap:', error);
-      return image;
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+      if (imagePart?.inlineData?.data) {
+        return `data:${imagePart.inlineData.mimeType ?? 'image/png'};base64,${imagePart.inlineData.data}`;
+      }
+    } catch (err) {
+      console.error('[GeminiService] performGenerativeEdit error:', err);
     }
+    return imageDataUrl;
+  }
+
+  async performFlashImageEdit(imageDataUrl: string, prompt: string): Promise<string> {
+    return this.performGenerativeEdit(imageDataUrl, prompt, 'flash');
   }
 
   async generatePlayerStats(teamName: string): Promise<any> {
+    if (!this.ai) return this.defaultStats(teamName);
     try {
-      if (!this.genAI) {
-        throw new Error('Gemini service not initialized');
-      }
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [{ parts: [{ text: `Generate realistic player stats and profile for a ${teamName} athlete. Return ONLY valid JSON: { "name": string, "team": string, "number": string, "background": string, "highlights": string[], "stats": { [key: string]: number } }` }] }]
+      });
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) return JSON.parse(match[0]);
+    } catch (err) {
+      console.error('[GeminiService] generatePlayerStats error:', err);
+    }
+    return this.defaultStats(teamName);
+  }
 
-      const prompt = `Generate realistic player statistics and background story for a ${teamName} player. Return as JSON with fields: background (string), highlights (array of strings), stats (object with keys like games, points, assists, etc.)`;
-      
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      // Parse JSON response or return default stats
-      try {
-        return JSON.parse(text);
-      } catch {
-        return {
-          background: `Elite athlete representing ${teamName}`,
-          highlights: ['Team Leader', 'All-Star Selection', 'Championship Run'],
-          stats: { games: 82, points: 24.5, assists: 7.2, rebounds: 5.8 }
-        };
-      }
-    } catch (error) {
-      console.error('Error generating player stats:', error);
-      return {
-        background: `Professional athlete for ${teamName}`,
-        highlights: ['Strong Performance', 'Team Player'],
-        stats: { games: 70, points: 18.0, assists: 5.0 }
-      };
+  private defaultStats(teamName: string) {
+    return {
+      name: 'ELITE ATHLETE',
+      team: teamName,
+      number: '23',
+      background: `Standout performer for ${teamName} with exceptional athleticism and leadership on the field.`,
+      highlights: ['All-Pro Selection', 'Championship Run', 'Record Breaker', 'Team Captain'],
+      stats: { SPD: 94, STR: 88, AGI: 91, AWR: 87, OVR: 90 }
+    };
+  }
+
+  async queryScoutMode(query: string): Promise<{ text: string; sources: { uri: string; title: string }[] }> {
+    if (!this.ai) return { text: 'Scout mode offline. API key required.', sources: [] };
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [{ parts: [{ text: `You are a sports intelligence scout. Answer this query with verified sports data: ${query}` }] }],
+        config: { tools: [{ googleSearch: {} }] } as any
+      });
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? 'No data found.';
+      const groundingMetadata = (response.candidates?.[0] as any)?.groundingMetadata;
+      const sources = (groundingMetadata?.groundingChunks ?? []).map((chunk: any) => ({
+        uri: chunk.web?.uri ?? '',
+        title: chunk.web?.title ?? 'Source'
+      })).filter((s: any) => s.uri);
+      return { text, sources };
+    } catch (err) {
+      console.error('[GeminiService] queryScoutMode error:', err);
+      return { text: 'Neural downlink error. Please retry.', sources: [] };
     }
   }
 
-  async generateImage(prompt: string, image: string, systemInstruction?: string): Promise<string | null> {
+  async queryCoachMode(query: string): Promise<{ text: string; suggestions: string[] }> {
+    if (!this.ai) return { text: 'Coach mode offline. API key required.', suggestions: [] };
     try {
-      if (!this.genAI) {
-        throw new Error('Gemini service not initialized');
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [{
+          parts: [{
+            text: `You are an elite sports design coach with expertise in kit design, color theory, and athlete branding. 
+Answer this design question with expert advice and end with 3 brief follow-up suggestion labels (max 5 words each) as JSON array.
+Format: {"response": "...", "suggestions": ["...", "...", "..."]}
+Question: ${query}`
+          }]
+        }]
+      });
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        return { text: parsed.response ?? text, suggestions: parsed.suggestions ?? [] };
       }
-      
-      const imageParts = {
-        inlineData: {
-          data: image.split(',')[1],
-          mimeType: 'image/jpeg',
-        },
-      };
+      return { text, suggestions: [] };
+    } catch (err) {
+      console.error('[GeminiService] queryCoachMode error:', err);
+      return { text: 'Neural downlink interrupted.', suggestions: [] };
+    }
+  }
 
-      const result = await this.model.generateContent([prompt, imageParts]);
-      const response = await result.response;
-      return response.text();
-    } catch (error) {
-      console.error('Error generating image:', error);
-      return null;
+  async generateNeuralBio(name: string, role: string, keywords: string[]): Promise<string> {
+    if (!this.ai) return 'Neural architecture finalized. Athlete profile locked.';
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [{
+          parts: [{
+            text: `Write a 2-sentence elite athlete/designer bio for ${name}. Role: ${role}. Style traits: ${keywords.join(', ')}. Use a cinematic, high-performance sports brand tone. No hashtags.`
+          }]
+        }]
+      });
+      return response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? 'Neural architecture finalized.';
+    } catch (err) {
+      console.error('[GeminiService] generateNeuralBio error:', err);
+      return 'Neural architecture finalized. Legacy protocol active.';
     }
   }
 }
