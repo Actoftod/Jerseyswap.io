@@ -43,7 +43,7 @@ export interface SwapBattle {
   isActive: boolean;
 }
 
-export type AppStep = 'landing' | 'onboarding' | 'auth' | 'sport-select' | 'league-select' | 'upload' | 'customize' | 'jersey-lab' | 'processing' | 'result' | 'profile' | 'editor' | 'social-feed' | 'swap-battle';
+export type AppStep = 'landing' | 'onboarding' | 'auth' | 'sport-select' | 'league-select' | 'upload' | 'customize' | 'jersey-lab' | 'processing' | 'result' | 'profile' | 'editor' | 'social-feed' | 'swap-battle' | 'ai-lab';
 
 export interface Comment {
   id: string;

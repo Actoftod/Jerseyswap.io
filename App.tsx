@@ -8,12 +8,14 @@ import PlayerCard from './components/PlayerCard';
 import PhotoEditor from './components/PhotoEditor';
 import JerseyLab from './components/JerseyLab';
 import SwapBattleView from './components/SwapBattle';
+import BeforeAfterSlider from './components/BeforeAfterSlider';
+import JerseySkeletonLoader from './components/JerseySkeletonLoader';
 import AILab from './components/AILab';
 import OnboardingFlow from './components/OnboardingFlow';
 import ProfileView from './components/ProfileView';
 import { SocialFeed } from './components/SocialFeed';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Swords, Globe, FlaskConical } from 'lucide-react';
+import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Search, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Swords, Globe, FlaskConical } from 'lucide-react';
 
 const STORAGE_ACCOUNTS_KEY = 'js_pro_accounts_v1';
 const SESSION_KEY = 'js_pro_session_v1';
@@ -65,9 +67,13 @@ const App: React.FC = () => {
   const [viewingProfile, setViewingProfile] = useState<UserProfile | null>(null);
   const [step, setStep] = useState<AppStep | 'auth'>('auth');
   const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'select' | '2fa'>('select');
-  const [showAILab, setShowAILab] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
+
+  // Intel Engine tab state (controlled from header)
+  const [intelTab, setIntelTab] = useState<'scout' | 'coach' | 'studio'>('scout');
+  // Result view: toggle between before/after slider and single result image
+  const [showResultSlider, setShowResultSlider] = useState(true);
 
   // Social State
   const [socialSwaps, setSocialSwaps] = useState<SocialSwap[]>(INITIAL_SOCIAL_SWAPS);
@@ -85,6 +91,7 @@ const App: React.FC = () => {
   });
   
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [sourceImage, setSourceImage] = useState<string | null>(null); // original photo for before/after slider
   const [playerData, setPlayerData] = useState<any>(null);
   const [showPlayerCard, setShowPlayerCard] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -223,7 +230,6 @@ const App: React.FC = () => {
 
   const reset = useCallback(() => {
     setStep('sport-select');
-    setShowAILab(false);
     setViewingProfile(null);
     setState({ sportId: null, image: null, league: null, team: null, number: '23', removeBackground: false, customPrompt: '' });
     setResultImage(null);
@@ -248,6 +254,7 @@ const App: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const rawBase64 = reader.result as string;
+        setSourceImage(rawBase64); // preserve original for before/after slider
         setIsPreparingPlate(true);
         try {
           const preparedPlate = await geminiService.current.prepareAthletePlate(rawBase64);
@@ -277,7 +284,10 @@ const App: React.FC = () => {
       const persistedUrl = await storageService.uploadSwap(result, swapId);
       setResultImage(persistedUrl);
       setPlayerData(stats);
+      setShowResultSlider(true);
       setStep('result');
+      // Haptic feedback on mobile
+      if (navigator.vibrate) navigator.vibrate([60, 30, 120]);
       showToast('success', 'NEURAL_FORGE_COMPLETE');
     } catch (error) {
       setStep('customize');
@@ -299,7 +309,9 @@ const App: React.FC = () => {
       const persistedUrl = await storageService.uploadSwap(result, swapId);
       setResultImage(persistedUrl);
       setPlayerData(stats);
+      setShowResultSlider(true);
       setStep('result');
+      if (navigator.vibrate) navigator.vibrate([60, 30, 120]);
       showToast('success', 'LAB_FORGE_COMPLETE');
     } catch (error) {
       setStep('jersey-lab');
@@ -589,34 +601,105 @@ const App: React.FC = () => {
         </div>
       ) : (
         <div className="w-full flex flex-col items-center">
-          <header className="fixed top-0 inset-x-0 z-[100] bg-black/60 backdrop-blur-2xl border-b border-white/5 px-6 h-14 flex items-center justify-between">
-            <button onClick={reset} aria-label="Reset application" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-              <Zap className="w-5 h-5 text-[#ccff00] fill-current" />
-              <span className="font-oswald italic font-black text-sm tracking-tighter uppercase">JERSEY<span className="text-[#ccff00]">SWAP</span></span>
-            </button>
-            <div className="flex gap-2">
-              <button onClick={() => setStep('social-feed')} aria-label="Social Feed" title="Social Feed" aria-current={step === 'social-feed' ? 'page' : undefined} className={`p-2 rounded-lg ${step === 'social-feed' ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Globe className="w-5 h-5" /></button>
-              <button onClick={() => setShowAILab(!showAILab)} aria-label="Toggle AI Lab" title="AI Lab" aria-pressed={showAILab} className={`p-2 rounded-lg ${showAILab ? 'text-[#ccff00]' : 'text-zinc-500'}`}><Cpu className="w-5 h-5" /></button>
-              <button onClick={() => { setViewingProfile(null); setStep('profile'); }} aria-label="My Profile" title="My Profile" aria-current={step === 'profile' ? 'page' : undefined} className={`p-2 rounded-lg ${step === 'profile' && !viewingProfile ? 'text-[#ccff00]' : 'text-zinc-500'}`}><LayoutGrid className="w-5 h-5" /></button>
-              <button onClick={logout} aria-label="Log Out" title="Log Out" className="p-2 text-zinc-700 hover:text-red-500"><LogOut className="w-5 h-5" /></button>
+          <header className={`fixed top-0 inset-x-0 z-[100] bg-black/60 backdrop-blur-2xl border-b border-white/5 transition-all duration-300 ${step === 'ai-lab' ? 'h-[6.5rem]' : 'h-14'}`}>
+            {/* Top row */}
+            <div className="px-4 h-14 flex items-center justify-between">
+              <button onClick={reset} aria-label="Reset application" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                <Zap className="w-5 h-5 text-[#ccff00] fill-current" />
+                <span className="font-oswald italic font-black text-sm tracking-tighter uppercase">JERSEY<span className="text-[#ccff00]">SWAP</span></span>
+              </button>
+              <nav className="flex items-center gap-1" aria-label="Main navigation">
+                <button
+                  onClick={() => setStep('social-feed')}
+                  aria-label="Social Feed"
+                  title="Feed"
+                  aria-current={step === 'social-feed' ? 'page' : undefined}
+                  className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-oswald italic font-black uppercase tracking-wider transition-all ${step === 'social-feed' ? 'text-[#ccff00] bg-[#ccff00]/10' : 'text-zinc-500 hover:text-white'}`}
+                >
+                  <Globe className="w-4 h-4" />
+                  <span className="hidden sm:block">Feed</span>
+                </button>
+                <button
+                  onClick={() => setStep('swap-battle')}
+                  aria-label="Swap Battle"
+                  title="Battle"
+                  aria-current={step === 'swap-battle' ? 'page' : undefined}
+                  className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-oswald italic font-black uppercase tracking-wider transition-all ${step === 'swap-battle' ? 'text-orange-400 bg-orange-400/10' : 'text-zinc-500 hover:text-white'}`}
+                >
+                  <Swords className="w-4 h-4" />
+                  <span className="hidden sm:block">Battle</span>
+                </button>
+                <button
+                  onClick={() => { setStep('ai-lab'); }}
+                  aria-label="AI Intel Engine"
+                  title="Intel Engine"
+                  aria-current={step === 'ai-lab' ? 'page' : undefined}
+                  className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-oswald italic font-black uppercase tracking-wider transition-all ${step === 'ai-lab' ? 'text-[#ccff00] bg-[#ccff00]/10' : 'text-zinc-500 hover:text-white'}`}
+                >
+                  <Cpu className="w-4 h-4" />
+                  <span className="hidden sm:block">Intel</span>
+                </button>
+                <div className="w-px h-5 bg-white/10 mx-1" />
+                <button
+                  onClick={() => { setViewingProfile(null); setStep('profile'); }}
+                  aria-label="My Profile"
+                  title="Profile"
+                  aria-current={step === 'profile' && !viewingProfile ? 'page' : undefined}
+                  className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-oswald italic font-black uppercase tracking-wider transition-all ${step === 'profile' && !viewingProfile ? 'text-[#ccff00] bg-[#ccff00]/10' : 'text-zinc-500 hover:text-white'}`}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span className="hidden sm:block">Profile</span>
+                </button>
+                <button
+                  onClick={logout}
+                  aria-label="Log Out"
+                  title="Log Out"
+                  className="p-2 text-zinc-700 hover:text-red-500 transition-all"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </nav>
             </div>
-          </header>
 
-          <main className="flex-1 w-full pt-20 relative z-10 px-4">
-            <AnimatePresence mode="wait">
-              {step === 'processing' && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center overflow-hidden">
-                  <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-50 grayscale contrast-150">
-                    <source src="https://storage.googleapis.com/jerseyswap/uploads/dark_clouds_with_lightning.mp4" type="video/mp4" />
-                  </video>
-                  <div className="relative z-10 flex flex-col items-center gap-6">
-                    <div className="w-32 h-32 border-4 border-[#ccff00] rounded-full flex items-center justify-center animate-[spin_3s_linear_infinite]">
-                      <Zap className="w-16 h-16 text-[#ccff00] fill-current animate-pulse" />
-                    </div>
-                    <h2 className="font-oswald italic font-black text-4xl md:text-6xl text-[#ccff00] uppercase tracking-ultra text-center">NEURAL FORGE IN PROGRESS</h2>
-                  </div>
+            {/* Intel Engine sub-nav — only visible when step === 'ai-lab' */}
+            <AnimatePresence>
+              {step === 'ai-lab' && (
+                <motion.div
+                  key="intel-subnav"
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18 }}
+                  className="px-4 pb-2.5 flex items-center justify-center gap-2"
+                  aria-label="Intel Engine sub-navigation"
+                >
+                  {([
+                    { id: 'scout', label: 'SCOUT', icon: Search },
+                    { id: 'coach', label: 'COACH', icon: MessageSquare },
+                    { id: 'studio', label: 'STUDIO', icon: Sparkles },
+                  ] as const).map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setIntelTab(tab.id)}
+                      aria-current={intelTab === tab.id ? 'page' : undefined}
+                      className={`flex items-center gap-1.5 px-4 h-7 rounded-full text-[10px] font-oswald italic font-black uppercase tracking-widest border transition-all ${
+                        intelTab === tab.id
+                          ? 'bg-[#ccff00] text-black border-[#ccff00] shadow-[0_0_12px_rgba(204,255,0,0.35)]'
+                          : 'bg-white/5 text-zinc-500 border-white/5 hover:border-white/20 hover:text-white'
+                      }`}
+                    >
+                      <tab.icon className="w-3 h-3" />
+                      {tab.label}
+                    </button>
+                  ))}
                 </motion.div>
               )}
+            </AnimatePresence>
+          </header>
+
+          <main className={`flex-1 w-full relative z-10 px-4 transition-all duration-300 ${step === 'ai-lab' ? 'pt-[7.5rem]' : 'pt-20'}`}>
+            <AnimatePresence mode="wait">
+              {step === 'processing' && <JerseySkeletonLoader />}
 
               {step === 'social-feed' && activeProfile && (
                 <SocialFeed 
@@ -713,21 +796,59 @@ const App: React.FC = () => {
 
               {step === 'result' && resultImage && (
                 <div className="flex flex-col items-center pb-24">
-                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm aspect-[3/4] glass rounded-[3.5rem] overflow-hidden border border-white/10 relative mb-12">
-                     <img src={resultImage} className="w-full h-full object-cover" />
-                     <button onClick={() => window.open(resultImage, '_blank')} aria-label="Download Result" title="Download Result" className="absolute bottom-8 right-8 w-16 h-16 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-2xl">
-                       <Download className="w-7 h-7" />
-                     </button>
+                  {/* View toggle */}
+                  <div className="flex gap-2 mb-6">
+                    <button
+                      onClick={() => setShowResultSlider(true)}
+                      className={`px-5 h-8 rounded-full font-oswald italic font-black text-[10px] uppercase tracking-widest border transition-all ${showResultSlider ? 'bg-[#ccff00] text-black border-[#ccff00]' : 'bg-white/5 text-zinc-500 border-white/5 hover:border-white/20 hover:text-white'}`}
+                    >
+                      COMPARE
+                    </button>
+                    <button
+                      onClick={() => setShowResultSlider(false)}
+                      className={`px-5 h-8 rounded-full font-oswald italic font-black text-[10px] uppercase tracking-widest border transition-all ${!showResultSlider ? 'bg-[#ccff00] text-black border-[#ccff00]' : 'bg-white/5 text-zinc-500 border-white/5 hover:border-white/20 hover:text-white'}`}
+                    >
+                      RESULT
+                    </button>
+                  </div>
+
+                  <motion.div
+                    key={showResultSlider ? 'slider' : 'result-img'}
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full max-w-sm mb-12 relative"
+                  >
+                    {showResultSlider && state.image ? (
+                      <BeforeAfterSlider
+                        before={state.image}
+                        after={resultImage}
+                        teamName={state.team?.name}
+                      />
+                    ) : (
+                      <div className="w-full aspect-[3/4] glass rounded-[3.5rem] overflow-hidden border border-white/10 relative">
+                        <img src={resultImage} className="w-full h-full object-cover" alt="Jersey swap result" />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => window.open(resultImage, '_blank')}
+                      aria-label="Download Result"
+                      title="Download Result"
+                      className="absolute bottom-8 right-8 w-14 h-14 bg-[#ccff00] text-black rounded-full flex items-center justify-center shadow-2xl z-20"
+                    >
+                      <Download className="w-6 h-6" />
+                    </button>
                   </motion.div>
+
                   <div className="w-full max-w-sm space-y-4">
-                     <button onClick={() => setShowPlayerCard(true)} className="w-full py-6 bg-[#ccff00] text-black font-oswald italic font-black text-2xl rounded-3xl uppercase">VIEW_PLAYER_CARD</button>
-                     <button onClick={handlePublishToFeed} className="w-full py-6 glass border border-[#ccff00]/30 font-oswald italic font-black text-2xl rounded-3xl uppercase flex items-center justify-center gap-3 text-[#ccff00]">
-                       <Globe className="w-6 h-6" />PUBLISH_TO_FEED
-                     </button>
-                     <button onClick={handleSaveToVault} disabled={isSaving} className="w-full py-6 glass font-oswald italic font-black text-2xl rounded-3xl uppercase flex items-center justify-center gap-3">
-                       {isSaving ? <RotateCcw className="w-6 h-6 animate-spin" /> : <><BookmarkCheck className="w-6 h-6" />COMMIT_TO_VAULT</>}
-                     </button>
-                     <button onClick={reset} className="w-full py-6 border border-white/10 text-zinc-500 font-oswald italic font-black text-2xl rounded-3xl uppercase">NEW_DRAFT</button>
+                    <button onClick={() => setShowPlayerCard(true)} className="w-full py-6 bg-[#ccff00] text-black font-oswald italic font-black text-2xl rounded-3xl uppercase">VIEW_PLAYER_CARD</button>
+                    <button onClick={handlePublishToFeed} className="w-full py-6 glass border border-[#ccff00]/30 font-oswald italic font-black text-2xl rounded-3xl uppercase flex items-center justify-center gap-3 text-[#ccff00]">
+                      <Globe className="w-6 h-6" />PUBLISH_TO_FEED
+                    </button>
+                    <button onClick={handleSaveToVault} disabled={isSaving} className="w-full py-6 glass font-oswald italic font-black text-2xl rounded-3xl uppercase flex items-center justify-center gap-3">
+                      {isSaving ? <RotateCcw className="w-6 h-6 animate-spin" /> : <><BookmarkCheck className="w-6 h-6" />COMMIT_TO_VAULT</>}
+                    </button>
+                    <button onClick={reset} className="w-full py-6 border border-white/10 text-zinc-500 font-oswald italic font-black text-2xl rounded-3xl uppercase">NEW_DRAFT</button>
                   </div>
                 </div>
               )}
@@ -744,7 +865,11 @@ const App: React.FC = () => {
                   followingProfiles={profiles.filter(p => (viewingProfile || activeProfile).followingIds?.includes(p.id))}
                 />
               )}
-              {showAILab && <AILab />}
+              {step === 'ai-lab' && (
+                <motion.div key="ai-lab" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.2 }}>
+                  <AILab activeTab={intelTab} onTabChange={setIntelTab} />
+                </motion.div>
+              )}
             </AnimatePresence>
           </main>
 

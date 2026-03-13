@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from "../constants";
+import { getCachedSwap, setCachedSwap, buildSwapCacheKey } from "./storageService";
 
 export class GeminiService {
   private getAI() {
@@ -179,7 +180,7 @@ while preserving the original environment.`;
     }
   }
 
-  /** Core jersey swap */
+  /** Core jersey swap — checks prompt cache first */
   async performJerseySwap(
     base64Image: string,
     teamName: string,
@@ -187,6 +188,10 @@ while preserving the original environment.`;
     removeBackground = false,
     customPrompt = ""
   ): Promise<string> {
+    const cacheKey = buildSwapCacheKey(teamName, number, removeBackground, customPrompt);
+    const cached = getCachedSwap(cacheKey);
+    if (cached) return cached;
+
     const bgInstruction = removeBackground
       ? "Isolate the athlete and place them on a clean, professional stadium or studio background."
       : "Preserve the original background exactly as it is.";
@@ -217,7 +222,9 @@ while preserving the original environment.`;
       const part = response.candidates?.[0]?.content?.parts?.find(
         (p) => p.inlineData
       );
-      return part ? `data:image/png;base64,${part.inlineData!.data}` : "";
+      const result = part ? `data:image/png;base64,${part.inlineData!.data}` : "";
+      if (result) setCachedSwap(cacheKey, result);
+      return result;
     } catch (error) {
       console.error("Swap failed:", error);
       throw error;

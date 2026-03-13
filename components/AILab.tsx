@@ -18,8 +18,18 @@ const LOGO_STYLES = [
   { id: 'heritage', label: 'LEGACY_MARK', desc: 'Classic championship crest', prompt: 'shield-inspired, heritage textures, metallic gold accents, collegiate typography, prestigious' },
 ];
 
-const AILab: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'scout' | 'coach' | 'studio'>('scout');
+interface AILabProps {
+  activeTab?: 'scout' | 'coach' | 'studio';
+  onTabChange?: (tab: 'scout' | 'coach' | 'studio') => void;
+}
+
+const AILab: React.FC<AILabProps> = ({ activeTab: externalTab, onTabChange }) => {
+  const [internalTab, setInternalTab] = useState<'scout' | 'coach' | 'studio'>('scout');
+  const activeTab = externalTab ?? internalTab;
+  const setActiveTab = (tab: 'scout' | 'coach' | 'studio') => {
+    setInternalTab(tab);
+    onTabChange?.(tab);
+  };
   const [query, setQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [scoutResult, setScoutResult] = useState<{ text: string; sources: GroundingLink[] } | null>(null);
@@ -142,22 +152,6 @@ const AILab: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-700 px-4">
-      <div className="flex justify-center gap-2 md:gap-4 mb-8 flex-wrap">
-        {[
-          { id: 'scout', label: 'SCOUT MODE', icon: Search },
-          { id: 'coach', label: 'DESIGN COACH', icon: MessageCircle },
-          { id: 'studio', label: 'DESIGN STUDIO', icon: Zap }
-        ].map(tab => (
-          <button 
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-8 md:px-12 py-3 md:py-4 rounded-full font-oswald italic tracking-widest text-[10px] md:text-xs transition-all border font-black uppercase flex items-center gap-2 ${activeTab === tab.id ? 'bg-[#ccff00] text-black border-[#ccff00] shadow-[0_0_20px_rgba(204,255,0,0.3)]' : 'bg-white/5 text-zinc-500 border-white/5 hover:border-white/10'}`}
-          >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
 
       {activeTab === 'scout' && (
         <div className="space-y-8">
