@@ -27,6 +27,27 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onS
     return (b.likes * b.rating) - (a.likes * a.rating);
   });
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleShare = async (swap: SocialSwap) => {
+    const shareData = {
+      title: `${swap.userName} — ${swap.team} Jersey Swap`,
+      text: `Check out this ${swap.sport} jersey swap on JerseySwap.io`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        setCopiedId(swap.id);
+        setTimeout(() => setCopiedId(null), 2000);
+      }
+    } catch (err) {
+      // User cancelled — no-op
+    }
+  };
+
   const handleCommentSubmit = (swapId: string, text: string) => {
     onComment(swapId, text, replyTo?.commentId);
     setReplyTo(null);
@@ -114,7 +135,13 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onS
                     <MessageSquare className="w-6 h-6" />
                     <span className="font-oswald italic font-black text-xs">{swap.comments.length}</span>
                   </button>
-                  <button className="text-white hover:text-[#ccff00] transition-all"><Share2 className="w-6 h-6" /></button>
+                  <button
+                    onClick={() => handleShare(swap)}
+                    className={`transition-all ${copiedId === swap.id ? 'text-[#ccff00]' : 'text-white hover:text-[#ccff00]'}`}
+                    title={copiedId === swap.id ? 'Link copied!' : 'Share'}
+                  >
+                    <Share2 className="w-6 h-6" />
+                  </button>
                 </div>
                 
                 <button 

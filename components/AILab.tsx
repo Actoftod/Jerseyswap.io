@@ -36,12 +36,10 @@ const AILab: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gemini = useRef(new GeminiService());
 
-  const checkApiKey = async () => {
-    // @ts-ignore
-    const hasKey = await window.aistudio.hasSelectedApiKey();
-    if (!hasKey) {
-      // @ts-ignore
-      await window.aistudio.openSelectKey();
+  const checkApiKey = (): boolean => {
+    const key = process.env.API_KEY;
+    if (!key) {
+      alert("API_KEY not configured. Please set the API_KEY environment variable.");
       return false;
     }
     return true;
@@ -104,7 +102,7 @@ const AILab: React.FC = () => {
 
   const handleGenerateLogo = async () => {
     if (!logoPrompt) return;
-    const authorized = await checkApiKey();
+    const authorized = checkApiKey();
     if (!authorized) return;
 
     setIsGeneratingLogo(true);
@@ -112,7 +110,7 @@ const AILab: React.FC = () => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
+        model: 'imagen-3.0-generate-001',
         prompt: `Ultra-premium sports brand logo for "${logoPrompt.toUpperCase()}". Archetype: ${selectedStyle.prompt}. Design language: Pure black and white, vector aesthetic, high contrast. Must look like a professional identity for Nike or Apple. No shadows, no gradients, pure 8K precision. Centered on white background.`,
         config: {
           numberOfImages: 1,
@@ -127,11 +125,7 @@ const AILab: React.FC = () => {
       }
     } catch (err) {
       console.error("Logo generation failed:", err);
-      // @ts-ignore
-      if (err.message?.includes("Requested entity was not found")) {
-        // @ts-ignore
-        await window.aistudio.openSelectKey();
-      }
+      alert("Logo generation failed. Please check your API key and try again.");
     } finally {
       setIsGeneratingLogo(false);
     }
@@ -298,7 +292,7 @@ const AILab: React.FC = () => {
                     </div>
                     <div className="text-center px-6">
                         <span className="font-oswald italic font-black text-2xl uppercase tracking-ultra text-white group-hover:text-[#ccff00] transition-colors">LOGO_ENGINE</span>
-                        <p className="font-oswald italic text-[9px] text-zinc-600 uppercase tracking-widest mt-2 font-black">IMAGEN_4_PRO_SERIES</p>
+                        <p className="font-oswald italic text-[9px] text-zinc-600 uppercase tracking-widest mt-2 font-black">IMAGEN_3_PRO_SERIES</p>
                     </div>
                   </div>
                </div>

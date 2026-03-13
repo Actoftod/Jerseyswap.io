@@ -233,7 +233,7 @@ const AdvancedEditor: React.FC<AdvancedEditorProps> = ({ initialImage, onSave, o
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       let operation = await ai.models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
+        model: 'veo-2.0-generate-001',
         prompt: `Cinematic high-performance athlete video. Style: Nike commercial. ${videoPrompt}`,
         image: {
           imageBytes: currentImage.split(',')[1],
@@ -429,7 +429,7 @@ const AdvancedEditor: React.FC<AdvancedEditorProps> = ({ initialImage, onSave, o
                 </button>
                 <div className="flex items-center gap-2 text-zinc-600 justify-center">
                   <Sparkles className="w-3 h-3" />
-                  <span className="font-oswald italic text-[8px] uppercase tracking-widest">Veo 3.1 AI Engine // Ultra High Performance</span>
+                  <span className="font-oswald italic text-[8px] uppercase tracking-widest">Veo 2.0 AI Engine // Ultra High Performance</span>
                 </div>
               </div>
             </motion.div>
