@@ -43,7 +43,28 @@ export interface SwapBattle {
   isActive: boolean;
 }
 
-export type AppStep = 'landing' | 'onboarding' | 'auth' | 'sport-select' | 'league-select' | 'upload' | 'customize' | 'jersey-lab' | 'processing' | 'result' | 'profile' | 'editor' | 'social-feed' | 'swap-battle' | 'ai-lab' | 'challenge' | 'collab-studio';
+export type AppStep = 'landing' | 'onboarding' | 'auth' | 'sport-select' | 'league-select' | 'upload' | 'customize' | 'jersey-lab' | 'processing' | 'result' | 'profile' | 'editor' | 'social-feed' | 'swap-battle' | 'ai-lab' | 'challenge' | 'collab-studio' | 'pro-upgrade' | 'brand-kits';
+
+export type ProTier = 'free' | 'pro' | 'elite';
+
+export type ExportResolution = 'standard' | '4k' | 'vector';
+
+export interface BrandKit {
+  id: string;
+  name: string;
+  palette: string[];        // hex strings (up to 6)
+  logoBase64: string | null;
+  fontStyle: string;        // e.g. "OSWALD_ITALIC" | "INTER"
+  teamContext: string;      // e.g. "North Ridge HS Eagles"
+  createdAt: string;
+}
+
+export interface ProFeatures {
+  tier: ProTier;
+  exportsLeft: number;      // free: 3/day; pro: unlimited
+  adFree: boolean;
+  brandKits: BrandKit[];
+}
 
 export interface Comment {
   id: string;
@@ -108,6 +129,7 @@ export interface UserProfile {
   vault: SavedSwap[];
   followingIds?: string[];
   savedSwapIds?: string[];
+  pro?: ProFeatures;
 }
 
 export interface SwapState {

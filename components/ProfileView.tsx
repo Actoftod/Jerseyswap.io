@@ -177,6 +177,9 @@ interface ProfileViewProps {
   onFollow: (userId: string) => void;
   onGenerateBio?: () => void;
   isBioLoading?: boolean;
+  proTier?: import('../types').ProTier;
+  onOpenBrandKits?: () => void;
+  onOpenProUpgrade?: () => void;
 }
 
 interface LiveStat {
@@ -186,7 +189,7 @@ interface LiveStat {
   status: 'live' | 'final' | 'upcoming';
 }
 
-const ProfileView: React.FC<ProfileViewProps> = ({ profile, currentUser, isOwnProfile, followingProfiles, onUpdate, onBack, onFollow }) => {
+const ProfileView: React.FC<ProfileViewProps> = ({ profile, currentUser, isOwnProfile, followingProfiles, onUpdate, onBack, onFollow, proTier = 'free', onOpenBrandKits, onOpenProUpgrade }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [editProfile, setEditProfile] = useState<UserProfile>(profile);
@@ -599,6 +602,50 @@ const ProfileView: React.FC<ProfileViewProps> = ({ profile, currentUser, isOwnPr
           </div>
         </div>
       </div>
+
+      {/* Pro membership card — own profile only */}
+      {isOwnProfile && (
+        <div className="glass rounded-[2rem] border border-white/8 p-6 flex items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border ${
+              proTier === 'elite' ? 'bg-orange-500/10 border-orange-500/20' :
+              proTier === 'pro'   ? 'bg-[#ccff00]/10 border-[#ccff00]/20' :
+                                   'bg-white/5 border-white/10'
+            }`}>
+              {proTier === 'elite' ? <Shield className="w-5 h-5 text-orange-400" /> :
+               proTier === 'pro'   ? <Zap className="w-5 h-5 text-[#ccff00]" /> :
+                                    <Cpu className="w-5 h-5 text-zinc-600" />}
+            </div>
+            <div>
+              <p className={`font-oswald italic font-black text-sm uppercase leading-none ${
+                proTier === 'elite' ? 'text-orange-400' : proTier === 'pro' ? 'text-[#ccff00]' : 'text-zinc-500'
+              }`}>{proTier.toUpperCase()} TIER</p>
+              <p className="font-oswald italic text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
+                {proTier === 'free' ? 'Upgrade for 4K exports & brand kits' : '4K exports + brand kits unlocked'}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            {proTier !== 'free' && onOpenBrandKits && (
+              <button onClick={onOpenBrandKits} className="flex items-center gap-1.5 px-4 py-2 border border-white/10 rounded-xl font-oswald italic font-black text-[10px] uppercase text-zinc-300 hover:border-white/25 transition-colors">
+                <Layers className="w-3.5 h-3.5" /> BRAND KITS
+              </button>
+            )}
+            {onOpenProUpgrade && (
+              <button
+                onClick={proTier === 'free' ? onOpenProUpgrade : onOpenBrandKits}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-oswald italic font-black text-[10px] uppercase transition-colors ${
+                  proTier === 'free'
+                    ? 'bg-[#ccff00] text-black'
+                    : 'border border-white/10 text-zinc-500 hover:border-white/25'
+                }`}
+              >
+                {proTier === 'free' ? 'UPGRADE' : 'MANAGE'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {isModalOpen && (

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, SwapBattle, Comment, computeRarity, SwapChallenge, CollabSession } from './types';
+import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, SwapBattle, Comment, computeRarity, SwapChallenge, CollabSession, ProFeatures, BrandKit } from './types';
 import { TEAMS, LEAGUES } from './constants';
 import { GeminiService } from './services/geminiService';
 import { storageService } from './services/storageService';
@@ -16,6 +16,8 @@ import ProfileView from './components/ProfileView';
 import SwapChallengeView from './components/SwapChallenge';
 import { CollabStudio } from './components/CollabStudio';
 import { SocialFeed } from './components/SocialFeed';
+import ProUpgradeModal from './components/ProUpgradeModal';
+import { BrandKitManager } from './components/BrandKitManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Search, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Swords, Globe, FlaskConical } from 'lucide-react';
 
@@ -76,6 +78,16 @@ const App: React.FC = () => {
   const [intelTab, setIntelTab] = useState<'scout' | 'coach' | 'studio'>('scout');
   // Result view: toggle between before/after slider and single result image
   const [showResultSlider, setShowResultSlider] = useState(true);
+
+  // Pro tier state
+  const [proFeatures, setProFeatures] = useState<ProFeatures>({
+    tier: 'free',
+    exportsLeft: 3,
+    adFree: false,
+    brandKits: [],
+  });
+  const [showProModal, setShowProModal] = useState(false);
+  const [proModalReason, setProModalReason] = useState<'export-4k' | 'brand-kit' | 'ad-free' | 'general'>('general');
 
   // Social State
   const [socialSwaps, setSocialSwaps] = useState<SocialSwap[]>(INITIAL_SOCIAL_SWAPS);
@@ -357,6 +369,46 @@ const App: React.FC = () => {
       setIsSaving(false);
       showToast('success', 'COMMITTED_TO_VAULT');
     }, 800);
+  };
+
+  // Pro tier handlers
+  const openProModal = (reason: typeof proModalReason = 'general') => {
+    setProModalReason(reason);
+    setShowProModal(true);
+  };
+
+  const handleUpgrade = (tier: ProFeatures['tier']) => {
+    setProFeatures({
+      tier,
+      exportsLeft: tier === 'free' ? 3 : Infinity,
+      adFree: tier !== 'free',
+      brandKits: proFeatures.brandKits,
+    });
+    showToast('success', `UPGRADED_TO_${tier.toUpperCase()}`);
+  };
+
+  const handleSaveBrandKit = (kit: BrandKit) => {
+    setProFeatures(prev => {
+      const existing = prev.brandKits.findIndex(k => k.id === kit.id);
+      const updated = existing >= 0
+        ? prev.brandKits.map((k, i) => i === existing ? kit : k)
+        : [...prev.brandKits, kit];
+      return { ...prev, brandKits: updated };
+    });
+    showToast('success', 'BRAND_KIT_SAVED');
+  };
+
+  const handleDeleteBrandKit = (kitId: string) => {
+    setProFeatures(prev => ({ ...prev, brandKits: prev.brandKits.filter(k => k.id !== kitId) }));
+  };
+
+  const handle4KExport = () => {
+    if (proFeatures.tier === 'free') {
+      openProModal('export-4k');
+      return;
+    }
+    // Pro+: trigger high-res download by opening resultImage in new tab
+    if (resultImage) window.open(resultImage, '_blank');
   };
 
   // Challenge handlers
@@ -898,6 +950,19 @@ const App: React.FC = () => {
                     <button onClick={handleSaveToVault} disabled={isSaving} className="w-full py-6 glass font-oswald italic font-black text-2xl rounded-3xl uppercase flex items-center justify-center gap-3">
                       {isSaving ? <RotateCcw className="w-6 h-6 animate-spin" /> : <><BookmarkCheck className="w-6 h-6" />COMMIT_TO_VAULT</>}
                     </button>
+                    <button
+                      onClick={handle4KExport}
+                      className="w-full py-6 glass font-oswald italic font-black text-2xl rounded-3xl uppercase flex items-center justify-center gap-3 relative overflow-hidden"
+                    >
+                      <Download className="w-6 h-6" />
+                      EXPORT_4K
+                      {proFeatures.tier === 'free' && (
+                        <span className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ccff00]/15 border border-[#ccff00]/30">
+                          <Lock className="w-3 h-3 text-[#ccff00]" />
+                          <span className="text-[#ccff00] text-[8px] font-oswald italic font-black uppercase tracking-widest">PRO</span>
+                        </span>
+                      )}
+                    </button>
                     <button onClick={reset} className="w-full py-6 border border-white/10 text-zinc-500 font-oswald italic font-black text-2xl rounded-3xl uppercase">NEW_DRAFT</button>
                   </div>
                 </div>
@@ -913,8 +978,29 @@ const App: React.FC = () => {
                   onUpdate={(p) => syncProfiles(profiles.map(pr => pr.id === p.id ? p : pr))}
                   onFollow={handleFollowAction}
                   followingProfiles={profiles.filter(p => (viewingProfile || activeProfile).followingIds?.includes(p.id))}
+                  proTier={proFeatures.tier}
+                  onOpenBrandKits={() => setStep('brand-kits')}
+                  onOpenProUpgrade={() => openProModal('general')}
                 />
               )}
+
+              {step === 'brand-kits' && activeProfile && (
+                <motion.div key="brand-kits" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.2 }}>
+                  <div className="w-full max-w-2xl mx-auto pt-4">
+                    <button onClick={() => setStep('profile')} className="flex items-center gap-2 mb-8 font-oswald italic font-black text-[10px] uppercase tracking-widest text-zinc-500 hover:text-white transition-colors">
+                      <span className="text-lg leading-none">←</span> BACK TO PROFILE
+                    </button>
+                    <BrandKitManager
+                      kits={proFeatures.brandKits}
+                      tier={proFeatures.tier}
+                      onSave={handleSaveBrandKit}
+                      onDelete={handleDeleteBrandKit}
+                      onUpgradeClick={() => openProModal('brand-kit')}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
               {step === 'ai-lab' && (
                 <motion.div key="ai-lab" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.2 }}>
                   <AILab
@@ -949,6 +1035,15 @@ const App: React.FC = () => {
 
       {showPlayerCard && resultImage && playerData && activeProfile && (
         <PlayerCard image={resultImage} name={activeProfile.name} team={state.team?.name || ''} number={state.number} background={playerData.background} highlights={playerData.highlights} stats={playerData.stats} onClose={() => setShowPlayerCard(false)} />
+      )}
+
+      {showProModal && (
+        <ProUpgradeModal
+          currentTier={proFeatures.tier}
+          triggerReason={proModalReason}
+          onUpgrade={handleUpgrade}
+          onClose={() => setShowProModal(false)}
+        />
       )}
     </div>
   );
