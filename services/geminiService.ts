@@ -277,6 +277,101 @@ while preserving the original environment.`;
     }
   }
 
+  /** Query live trade rumors and suggest destination-team jersey swaps */
+  async queryTradeRumors(playerOrTeam: string): Promise<{
+    rumors: Array<{ player: string; fromTeam: string; toTeam: string; likelihood: string; summary: string }>;
+    suggestedSwapTeam: string | null;
+    analysis: string;
+  }> {
+    const ai = this.getAI();
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: `Current NFL/NBA/MLB trade rumors and contract news for: ${playerOrTeam}. List the top rumors, likely destinations, and suggest which team jersey they should be swapped into for a JerseySwap.`,
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            rumors: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  player:      { type: Type.STRING },
+                  fromTeam:    { type: Type.STRING },
+                  toTeam:      { type: Type.STRING },
+                  likelihood:  { type: Type.STRING },
+                  summary:     { type: Type.STRING },
+                },
+                required: ["player", "fromTeam", "toTeam", "likelihood", "summary"],
+              },
+            },
+            suggestedSwapTeam: { type: Type.STRING },
+            analysis:          { type: Type.STRING },
+          },
+          required: ["rumors", "suggestedSwapTeam", "analysis"],
+        },
+      },
+    });
+    try {
+      return JSON.parse(response.text || "{}");
+    } catch {
+      return { rumors: [], suggestedSwapTeam: null, analysis: "No trade intel found." };
+    }
+  }
+
+  /** Analyze a swap image and return a Brand Score breakdown */
+  async queryBrandScore(base64Image: string): Promise<{
+    overall: number;
+    lighting: number;
+    logoPlacement: number;
+    colorAccuracy: number;
+    fabricRealism: number;
+    verdict: string;
+    tips: string[];
+  }> {
+    const ai = this.getAI();
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: base64Image.replace(/^data:image\/\w+;base64,/, ""),
+                mimeType: "image/jpeg",
+              },
+            },
+            {
+              text: `You are a professional sports apparel brand director. Analyze this jersey swap image and return a Brand Score JSON. Score each dimension 0-100. Be honest and specific about what to improve.`,
+            },
+          ],
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              overall:       { type: Type.NUMBER },
+              lighting:      { type: Type.NUMBER },
+              logoPlacement: { type: Type.NUMBER },
+              colorAccuracy: { type: Type.NUMBER },
+              fabricRealism: { type: Type.NUMBER },
+              verdict:       { type: Type.STRING },
+              tips:          { type: Type.ARRAY, items: { type: Type.STRING } },
+            },
+            required: ["overall", "lighting", "logoPlacement", "colorAccuracy", "fabricRealism", "verdict", "tips"],
+          },
+        },
+      });
+      return JSON.parse(response.text || "{}");
+    } catch (error) {
+      console.error("Brand score failed:", error);
+      return { overall: 0, lighting: 0, logoPlacement: 0, colorAccuracy: 0, fabricRealism: 0, verdict: "Analysis failed.", tips: [] };
+    }
+  }
+
   /** Generate a new image purely from a text prompt (no source image required) */
   async generateImageFromPrompt(prompt: string): Promise<string> {
     const ai = this.getAI();
