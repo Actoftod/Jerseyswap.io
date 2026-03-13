@@ -2,10 +2,12 @@
 import React, { useState, useRef } from 'react';
 import { GeminiService } from '../services/geminiService';
 import AdvancedEditor from './AdvancedEditor';
+import { CollabStudio } from './CollabStudio';
 // Added missing motion import from framer-motion
 import { motion } from 'framer-motion';
-import { LayoutGrid, Cpu, Search, Zap, Upload, MessageCircle, Sparkles, Send, PenTool, RotateCcw, Check, X, ShieldCheck } from 'lucide-react';
+import { LayoutGrid, Cpu, Search, Zap, Upload, MessageCircle, Sparkles, Send, PenTool, RotateCcw, Check, X, ShieldCheck, Users } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
+import { CollabSession, UserProfile } from '../types';
 
 interface GroundingLink {
   uri: string;
@@ -21,9 +23,14 @@ const LOGO_STYLES = [
 interface AILabProps {
   activeTab?: 'scout' | 'coach' | 'studio';
   onTabChange?: (tab: 'scout' | 'coach' | 'studio') => void;
+  user?: UserProfile;
+  collabSessions?: CollabSession[];
+  onCreateCollabSession?: (session: CollabSession) => void;
+  onJoinCollabSession?: (sessionId: string) => void;
+  onUpdateCollabSession?: (sessionId: string, updates: Partial<CollabSession>) => void;
 }
 
-const AILab: React.FC<AILabProps> = ({ activeTab: externalTab, onTabChange }) => {
+const AILab: React.FC<AILabProps> = ({ activeTab: externalTab, onTabChange, user, collabSessions = [], onCreateCollabSession, onJoinCollabSession, onUpdateCollabSession }) => {
   const [internalTab, setInternalTab] = useState<'scout' | 'coach' | 'studio'>('scout');
   const activeTab = externalTab ?? internalTab;
   const setActiveTab = (tab: 'scout' | 'coach' | 'studio') => {
@@ -42,6 +49,7 @@ const AILab: React.FC<AILabProps> = ({ activeTab: externalTab, onTabChange }) =>
   const [selectedStyle, setSelectedStyle] = useState(LOGO_STYLES[0]);
   const [showLogoMaker, setShowLogoMaker] = useState(false);
   const [previewLogo, setPreviewLogo] = useState<string | null>(null);
+  const [studioMode, setStudioMode] = useState<'default' | 'collab'>('default');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gemini = useRef(new GeminiService());
@@ -264,6 +272,14 @@ const AILab: React.FC<AILabProps> = ({ activeTab: externalTab, onTabChange }) =>
             <div className="animate-in zoom-in-95 duration-700">
                <AdvancedEditor initialImage={studioImage} onSave={(img) => { setStudioImage(img); }} onBack={() => setStudioImage(null)} />
             </div>
+          ) : studioMode === 'collab' && user ? (
+            <CollabStudio
+              user={user}
+              sessions={collabSessions}
+              onCreateSession={onCreateCollabSession || (() => {})}
+              onJoinSession={onJoinCollabSession || (() => {})}
+              onUpdateSession={onUpdateCollabSession || (() => {})}
+            />
           ) : (
             <div className="flex flex-col items-center justify-center h-full py-20 space-y-10 animate-in slide-in-from-bottom-10">
                <div className="text-center space-y-4">
@@ -287,6 +303,15 @@ const AILab: React.FC<AILabProps> = ({ activeTab: externalTab, onTabChange }) =>
                     <div className="text-center px-6">
                         <span className="font-oswald italic font-black text-2xl uppercase tracking-ultra text-white group-hover:text-[#ccff00] transition-colors">LOGO_ENGINE</span>
                         <p className="font-oswald italic text-[9px] text-zinc-600 uppercase tracking-widest mt-2 font-black">IMAGEN_3_PRO_SERIES</p>
+                    </div>
+                  </div>
+                  <div onClick={() => setStudioMode('collab')} className="flex-1 aspect-video md:aspect-square glass rounded-[3rem] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-6 hover:border-[#ccff00]/40 transition-all group cursor-pointer shadow-2xl relative overflow-hidden">
+                    <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:bg-[#ccff00]/10 transition-all duration-700">
+                      <Users className="w-8 h-8 text-zinc-500 group-hover:text-[#ccff00] transition-all" />
+                    </div>
+                    <div className="text-center px-6">
+                      <span className="font-oswald italic font-black text-2xl uppercase tracking-ultra text-white group-hover:text-[#ccff00] transition-colors">COLLAB_STUDIO</span>
+                      <p className="font-oswald italic text-[9px] text-zinc-600 uppercase tracking-widest mt-2 font-black">TWO_MINDS_ONE_KIT</p>
                     </div>
                   </div>
                </div>

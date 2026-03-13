@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageSquare, Star, Bookmark, Share2, MoreHorizontal, Send, CornerDownRight, TrendingUp, Clock, Award, BookmarkCheck, ThumbsUp, X, Swords } from 'lucide-react';
-import { SocialSwap, Comment, UserProfile, computeRarity, RARITY_CONFIG } from '../types';
+import { Heart, MessageSquare, Star, Bookmark, Share2, MoreHorizontal, Send, CornerDownRight, TrendingUp, Clock, Award, BookmarkCheck, ThumbsUp, X, Swords, ShieldCheck, Zap, Trophy, ChevronRight } from 'lucide-react';
+import { SocialSwap, Comment, UserProfile, computeRarity, RARITY_CONFIG, SwapChallenge } from '../types';
 
 interface SocialFeedProps {
   user: UserProfile;
   swaps: SocialSwap[];
+  activeChallenge?: SwapChallenge | null;
   onLike: (id: string) => void;
   onSave: (id: string) => void;
   onComment: (id: string, text: string, parentId?: string) => void;
@@ -14,9 +15,10 @@ interface SocialFeedProps {
   onFollow: (userId: string) => void;
   onViewProfile: (userId: string) => void;
   onNominateBattle?: (swap: SocialSwap) => void;
+  onOpenChallenge?: () => void;
 }
 
-export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onSave, onComment, onRate, onFollow, onViewProfile, onNominateBattle }) => {
+export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, activeChallenge, onLike, onSave, onComment, onRate, onFollow, onViewProfile, onNominateBattle, onOpenChallenge }) => {
   const [filter, setFilter] = useState<'trending' | 'newest' | 'liked' | 'rated'>('trending');
   const [activeComments, setActiveComments] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<{ swapId: string; commentId: string; userName: string } | null>(null);
@@ -78,6 +80,41 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onS
         </div>
       </div>
 
+      {/* Weekly Challenge Banner */}
+      {activeChallenge && activeChallenge.isActive && (
+        <motion.button
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={onOpenChallenge}
+          className="w-full text-left rounded-[2rem] overflow-hidden border border-white/10 relative group"
+          style={{ background: `linear-gradient(135deg, ${activeChallenge.accentColor}20 0%, #000 70%)` }}
+        >
+          <div className="absolute inset-0 scanlines pointer-events-none opacity-30" />
+          <div className="relative p-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border"
+                style={{ backgroundColor: `${activeChallenge.accentColor}20`, borderColor: `${activeChallenge.accentColor}40` }}
+              >
+                <Trophy className="w-6 h-6" style={{ color: activeChallenge.accentColor }} />
+              </div>
+              <div>
+                <div
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border mb-1"
+                  style={{ borderColor: `${activeChallenge.accentColor}40`, backgroundColor: `${activeChallenge.accentColor}15` }}
+                >
+                  <Zap className="w-2.5 h-2.5" style={{ color: activeChallenge.accentColor }} />
+                  <span className="font-oswald italic font-black text-[8px] uppercase tracking-widest" style={{ color: activeChallenge.accentColor }}>WEEKLY CHALLENGE LIVE</span>
+                </div>
+                <p className="font-oswald italic font-black text-white text-base uppercase leading-none">{activeChallenge.title}</p>
+                <p className="font-oswald italic text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">{activeChallenge.submissionIds.length} entries · {activeChallenge.prize}</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-zinc-600 group-hover:text-white transition-colors shrink-0" />
+          </div>
+        </motion.button>
+      )}
+
       <div className="space-y-12">
         {sortedSwaps.map(swap => (
           <motion.div 
@@ -131,6 +168,14 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onS
                     </div>
                   );
                 })()}
+                {swap.athleteVerification && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-sky-400/50 backdrop-blur-md bg-sky-400/15">
+                    <ShieldCheck className="w-2.5 h-2.5 text-sky-400" />
+                    <span className="font-oswald italic font-black text-[9px] text-sky-300 uppercase tracking-widest">
+                      ATHLETE VERIFIED
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -193,6 +238,33 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onS
                 </div>
                 <span className="font-oswald italic text-[9px] text-[#ccff00] font-bold">({swap.ratingCount})</span>
               </div>
+
+              {/* Athlete verification quote strip */}
+              {swap.athleteVerification && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="flex items-start gap-3 pt-3 border-t border-sky-500/10 bg-sky-500/5 -mx-6 px-6 py-3 mt-2"
+                >
+                  <img
+                    src={swap.athleteVerification.athleteAvatar || ''}
+                    className="w-7 h-7 rounded-full object-cover shrink-0 border border-sky-400/30"
+                    alt={swap.athleteVerification.athleteName}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <ShieldCheck className="w-3 h-3 text-sky-400 shrink-0" />
+                      <span className="font-oswald italic font-black text-[9px] text-sky-400 uppercase tracking-widest truncate">
+                        {swap.athleteVerification.athleteHandle}
+                      </span>
+                      <span className="font-oswald italic text-[9px] text-zinc-600 uppercase">{swap.athleteVerification.reaction}</span>
+                    </div>
+                    {swap.athleteVerification.quote && (
+                      <p className="text-zinc-400 text-[11px] italic leading-relaxed">"{swap.athleteVerification.quote}"</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
               <AnimatePresence>
                 {activeComments === swap.id && (

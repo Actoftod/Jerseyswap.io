@@ -43,7 +43,7 @@ export interface SwapBattle {
   isActive: boolean;
 }
 
-export type AppStep = 'landing' | 'onboarding' | 'auth' | 'sport-select' | 'league-select' | 'upload' | 'customize' | 'jersey-lab' | 'processing' | 'result' | 'profile' | 'editor' | 'social-feed' | 'swap-battle' | 'ai-lab';
+export type AppStep = 'landing' | 'onboarding' | 'auth' | 'sport-select' | 'league-select' | 'upload' | 'customize' | 'jersey-lab' | 'processing' | 'result' | 'profile' | 'editor' | 'social-feed' | 'swap-battle' | 'ai-lab' | 'challenge' | 'collab-studio';
 
 export interface Comment {
   id: string;
@@ -75,6 +75,10 @@ export interface SocialSwap {
   hasLiked?: boolean;
   rarity?: RarityTier;
   battleEligible?: boolean;
+  challengeId?: string;
+  athleteVerification?: AthleteVerification;
+  collabSessionId?: string;
+}
 
 export interface SavedSwap {
   id: string;

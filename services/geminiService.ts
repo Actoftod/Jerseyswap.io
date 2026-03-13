@@ -276,4 +276,22 @@ while preserving the original environment.`;
       throw error;
     }
   }
+
+  /** Generate a new image purely from a text prompt (no source image required) */
+  async generateImageFromPrompt(prompt: string): Promise<string> {
+    const ai = this.getAI();
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: { parts: [{ text: prompt }] },
+        config: { responseModalities: ["TEXT", "IMAGE"] },
+      });
+      const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+      if (!part?.inlineData?.data) throw new Error("No image returned");
+      return `data:image/png;base64,${part.inlineData.data}`;
+    } catch (error) {
+      console.error("generateImageFromPrompt failed:", error);
+      throw error;
+    }
+  }
 }

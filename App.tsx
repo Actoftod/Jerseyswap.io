@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, SwapBattle, Comment, computeRarity } from './types';
+import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, SwapBattle, Comment, computeRarity, SwapChallenge, CollabSession } from './types';
 import { TEAMS, LEAGUES } from './constants';
 import { GeminiService } from './services/geminiService';
 import { storageService } from './services/storageService';
@@ -13,6 +13,8 @@ import JerseySkeletonLoader from './components/JerseySkeletonLoader';
 import AILab from './components/AILab';
 import OnboardingFlow from './components/OnboardingFlow';
 import ProfileView from './components/ProfileView';
+import SwapChallengeView from './components/SwapChallenge';
+import { CollabStudio } from './components/CollabStudio';
 import { SocialFeed } from './components/SocialFeed';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Search, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Swords, Globe, FlaskConical } from 'lucide-react';
@@ -79,6 +81,22 @@ const App: React.FC = () => {
   const [socialSwaps, setSocialSwaps] = useState<SocialSwap[]>(INITIAL_SOCIAL_SWAPS);
   const [battles, setBattles] = useState<SwapBattle[]>([]);
   const [battleNominee, setBattleNominee] = useState<SocialSwap | null>(null);
+
+  // Community features: challenges + collab sessions
+  const [activeChallenge, setActiveChallenge] = useState<SwapChallenge>({
+    id: 'wc_001',
+    title: 'RETRO 90S WEEK',
+    theme: 'Old-school colorways, block fonts, bold gradients',
+    description: 'Recreate the iconic jersey aesthetics of the 90s. Think Charlotte Hornets teal, Chicago Bulls pinstripes, and classic World Cup kits. The most upvoted entry gets featured in the ELITE tab.',
+    startDate: new Date(Date.now() - 2 * 86400000).toISOString(),
+    endDate: new Date(Date.now() + 5 * 86400000).toISOString(),
+    prize: 'ELITE FEATURE',
+    submissionIds: ['s1'],
+    featuredWinnerId: null,
+    isActive: true,
+    accentColor: '#f97316',
+  });
+  const [collabSessions, setCollabSessions] = useState<CollabSession[]>([]);
 
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -339,6 +357,24 @@ const App: React.FC = () => {
       setIsSaving(false);
       showToast('success', 'COMMITTED_TO_VAULT');
     }, 800);
+  };
+
+  // Challenge handlers
+  const handleSubmitToChallenge = (challengeId: string, swapId: string) => {
+    setActiveChallenge(prev => ({
+      ...prev,
+      submissionIds: prev.submissionIds.includes(swapId) ? prev.submissionIds : [...prev.submissionIds, swapId],
+    }));
+    showToast('success', 'SUBMITTED_TO_CHALLENGE');
+  };
+
+  // Collab session handlers
+  const handleCreateCollabSession = (session: CollabSession) => {
+    setCollabSessions(prev => [session, ...prev]);
+  };
+  const handleJoinCollabSession = (sessionId: string) => { /* handled inside CollabStudio */ };
+  const handleUpdateCollabSession = (sessionId: string, updates: Partial<CollabSession>) => {
+    setCollabSessions(prev => prev.map(s => s.id === sessionId ? { ...s, ...updates } : s));
   };
 
   const handlePublishToFeed = () => {
@@ -705,6 +741,7 @@ const App: React.FC = () => {
                 <SocialFeed 
                   user={activeProfile}
                   swaps={socialSwaps}
+                  activeChallenge={activeChallenge}
                   onLike={handleSocialLike}
                   onSave={handleSocialSave}
                   onComment={handleSocialComment}
@@ -712,6 +749,19 @@ const App: React.FC = () => {
                   onFollow={handleFollowAction}
                   onViewProfile={handleViewProfile}
                   onNominateBattle={handleNominateBattle}
+                  onOpenChallenge={() => setStep('challenge')}
+                />
+              )}
+
+              {step === 'challenge' && activeProfile && (
+                <SwapChallengeView
+                  challenge={activeChallenge}
+                  swaps={socialSwaps}
+                  user={activeProfile}
+                  userSwaps={socialSwaps.filter(s => s.userId === activeProfile.id)}
+                  onBack={() => setStep('social-feed')}
+                  onSubmitSwap={handleSubmitToChallenge}
+                  onLike={handleSocialLike}
                 />
               )}
 
@@ -867,7 +917,15 @@ const App: React.FC = () => {
               )}
               {step === 'ai-lab' && (
                 <motion.div key="ai-lab" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.2 }}>
-                  <AILab activeTab={intelTab} onTabChange={setIntelTab} />
+                  <AILab
+                    activeTab={intelTab}
+                    onTabChange={setIntelTab}
+                    user={activeProfile ?? undefined}
+                    collabSessions={collabSessions}
+                    onCreateCollabSession={handleCreateCollabSession}
+                    onJoinCollabSession={handleJoinCollabSession}
+                    onUpdateCollabSession={handleUpdateCollabSession}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
