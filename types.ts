@@ -17,7 +17,33 @@ export interface League {
   accentColor?: string;
 }
 
-export type AppStep = 'landing' | 'onboarding' | 'auth' | 'sport-select' | 'league-select' | 'upload' | 'customize' | 'processing' | 'result' | 'profile' | 'editor' | 'social-feed';
+export type RarityTier = 'COMMON' | 'RARE' | 'LEGENDARY';
+
+export function computeRarity(rating: number, ratingCount: number): RarityTier {
+  const score = rating * ratingCount;
+  if (score >= 50) return 'LEGENDARY';
+  if (score >= 10) return 'RARE';
+  return 'COMMON';
+}
+
+export const RARITY_CONFIG: Record<RarityTier, { label: string; color: string; glow: string; border: string }> = {
+  COMMON:    { label: 'COMMON',    color: '#71717a', glow: 'rgba(113,113,122,0.3)',  border: 'border-zinc-700' },
+  RARE:      { label: 'RARE',      color: '#0EA5E9', glow: 'rgba(14,165,233,0.4)',   border: 'border-sky-500/50' },
+  LEGENDARY: { label: 'LEGENDARY', color: '#ccff00', glow: 'rgba(204,255,0,0.45)',   border: 'border-[#ccff00]/50' },
+};
+
+export interface SwapBattle {
+  id: string;
+  swapA: SocialSwap;
+  swapB: SocialSwap;
+  votesA: number;
+  votesB: number;
+  userVote: 'A' | 'B' | null;
+  expiresAt: string;
+  isActive: boolean;
+}
+
+export type AppStep = 'landing' | 'onboarding' | 'auth' | 'sport-select' | 'league-select' | 'upload' | 'customize' | 'jersey-lab' | 'processing' | 'result' | 'profile' | 'editor' | 'social-feed' | 'swap-battle';
 
 export interface Comment {
   id: string;
@@ -46,8 +72,9 @@ export interface SocialSwap {
   ratingCount: number;
   comments: Comment[];
   isSaved?: boolean;
-  timestamp: string;
-}
+  hasLiked?: boolean;
+  rarity?: RarityTier;
+  battleEligible?: boolean;
 
 export interface SavedSwap {
   id: string;

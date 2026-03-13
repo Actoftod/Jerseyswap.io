@@ -1,17 +1,19 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, Comment } from './types';
+import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, SwapBattle, Comment, computeRarity } from './types';
 import { TEAMS, LEAGUES } from './constants';
 import { GeminiService } from './services/geminiService';
 import { storageService } from './services/storageService';
 import PlayerCard from './components/PlayerCard';
 import PhotoEditor from './components/PhotoEditor';
+import JerseyLab from './components/JerseyLab';
+import SwapBattleView from './components/SwapBattle';
 import AILab from './components/AILab';
 import OnboardingFlow from './components/OnboardingFlow';
 import ProfileView from './components/ProfileView';
 import { SocialFeed } from './components/SocialFeed';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Sword, Globe } from 'lucide-react';
+import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, MessageSquare, LogOut, LayoutGrid, ShieldCheck, BookmarkCheck, Sparkles, Wand2, RotateCcw, AlertCircle, CheckCircle2, Trophy, Disc, Target, Activity, Dribbble, Swords, Globe, FlaskConical } from 'lucide-react';
 
 const STORAGE_ACCOUNTS_KEY = 'js_pro_accounts_v1';
 const SESSION_KEY = 'js_pro_session_v1';
@@ -69,6 +71,8 @@ const App: React.FC = () => {
 
   // Social State
   const [socialSwaps, setSocialSwaps] = useState<SocialSwap[]>(INITIAL_SOCIAL_SWAPS);
+  const [battles, setBattles] = useState<SwapBattle[]>([]);
+  const [battleNominee, setBattleNominee] = useState<SocialSwap | null>(null);
 
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -269,7 +273,6 @@ const App: React.FC = () => {
         geminiService.current.performJerseySwap(state.image, state.team.name, state.number, state.removeBackground, state.customPrompt),
         geminiService.current.generatePlayerStats(state.team.name)
       ]);
-      // Persist to storage (falls back to data URL in dev)
       const swapId = Date.now().toString();
       const persistedUrl = await storageService.uploadSwap(result, swapId);
       setResultImage(persistedUrl);
@@ -279,6 +282,28 @@ const App: React.FC = () => {
     } catch (error) {
       setStep('customize');
       showToast('error', 'SYNTHESIS_FAILURE');
+    } finally { setIsLoading(false); }
+  };
+
+  // Jersey Lab uses an enriched prompt built by the component
+  const handleLabSwap = async (enrichedPrompt: string) => {
+    if (!state.image || !state.team) return;
+    setIsLoading(true);
+    setStep('processing');
+    try {
+      const [result, stats] = await Promise.all([
+        geminiService.current.performJerseySwap(state.image, state.team.name, state.number, state.removeBackground, enrichedPrompt),
+        geminiService.current.generatePlayerStats(state.team.name)
+      ]);
+      const swapId = Date.now().toString();
+      const persistedUrl = await storageService.uploadSwap(result, swapId);
+      setResultImage(persistedUrl);
+      setPlayerData(stats);
+      setStep('result');
+      showToast('success', 'LAB_FORGE_COMPLETE');
+    } catch (error) {
+      setStep('jersey-lab');
+      showToast('error', 'LAB_SYNTHESIS_FAILURE');
     } finally { setIsLoading(false); }
   };
 
@@ -328,8 +353,54 @@ const App: React.FC = () => {
     setStep('social-feed');
   };
 
+  const handleNominateBattle = (swap: SocialSwap) => {
+    setBattleNominee(prev => {
+      if (!prev) {
+        showToast('success', `BATTLE_NOMINEE_A: ${swap.userName}. Pick a second swap to start the battle.`);
+        return swap;
+      }
+      if (prev.id === swap.id) {
+        showToast('error', 'CANNOT_BATTLE_SAME_SWAP');
+        return prev;
+      }
+      // Create battle
+      const newBattle: SwapBattle = {
+        id: Date.now().toString(),
+        swapA: prev,
+        swapB: swap,
+        votesA: 0,
+        votesB: 0,
+        userVote: null,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        isActive: true,
+      };
+      setBattles(b => [newBattle, ...b]);
+      showToast('success', 'SWAP_BATTLE_INITIATED');
+      setStep('swap-battle');
+      return null;
+    });
+  };
+
+  const handleBattleVote = (battleId: string, side: 'A' | 'B') => {
+    setBattles(prev => prev.map(b => {
+      if (b.id !== battleId || b.userVote) return b;
+      return {
+        ...b,
+        votesA: side === 'A' ? b.votesA + 1 : b.votesA,
+        votesB: side === 'B' ? b.votesB + 1 : b.votesB,
+        userVote: side,
+      };
+    }));
+  };
+
   const handleSocialLike = (id: string) => {
-    setSocialSwaps(prev => prev.map(s => s.id === id ? { ...s, likes: s.hasLiked ? s.likes - 1 : s.likes + 1, hasLiked: !s.hasLiked } : s));
+    setSocialSwaps(prev => prev.map(s => {
+      if (s.id !== id) return s;
+      const updated = { ...s, likes: s.hasLiked ? s.likes - 1 : s.likes + 1, hasLiked: !s.hasLiked };
+      // Recompute rarity on like
+      updated.rarity = computeRarity(updated.rating, updated.ratingCount);
+      return updated;
+    }));
   };
 
   const handleSocialSave = (id: string) => {
@@ -371,8 +442,9 @@ const App: React.FC = () => {
   const handleSocialRate = (id: string, rating: number) => {
     setSocialSwaps(prev => prev.map(s => {
       if (s.id === id) {
-        const newRating = (s.rating * s.ratingCount + rating) / (s.ratingCount + 1);
-        return { ...s, rating: Number(newRating.toFixed(1)), ratingCount: s.ratingCount + 1 };
+        const newCount = s.ratingCount + 1;
+        const newRating = Number(((s.rating * s.ratingCount + rating) / newCount).toFixed(1));
+        return { ...s, rating: newRating, ratingCount: newCount, rarity: computeRarity(newRating, newCount) };
       }
       return s;
     }));
@@ -556,6 +628,7 @@ const App: React.FC = () => {
                   onRate={handleSocialRate}
                   onFollow={handleFollowAction}
                   onViewProfile={handleViewProfile}
+                  onNominateBattle={handleNominateBattle}
                 />
               )}
 
@@ -610,6 +683,31 @@ const App: React.FC = () => {
                   number={state.number} onNumberChange={(n) => setState(p => ({ ...p, number: n }))} removeBackground={state.removeBackground} onToggleBackground={() => setState(p => ({ ...p, removeBackground: !p.removeBackground }))}
                   onSwap={handleSwap} isProcessing={isLoading}
                   customPrompt={state.customPrompt} onCustomPromptChange={(cp) => setState(p => ({ ...p, customPrompt: cp }))}
+                />
+              )}
+
+              {step === 'jersey-lab' && state.image && (
+                <JerseyLab
+                  image={state.image}
+                  teams={TEAMS.filter(t => t.leagueId === state.league?.id)}
+                  selectedTeam={state.team}
+                  onTeamSelect={(t) => setState(p => ({ ...p, team: t }))}
+                  number={state.number}
+                  onNumberChange={(n) => setState(p => ({ ...p, number: n }))}
+                  removeBackground={state.removeBackground}
+                  onToggleBackground={() => setState(p => ({ ...p, removeBackground: !p.removeBackground }))}
+                  customPrompt={state.customPrompt}
+                  onCustomPromptChange={(cp) => setState(p => ({ ...p, customPrompt: cp }))}
+                  onSwap={handleLabSwap}
+                  isProcessing={isLoading}
+                />
+              )}
+
+              {step === 'swap-battle' && (
+                <SwapBattleView
+                  battles={battles}
+                  onVote={handleBattleVote}
+                  onBack={() => setStep('social-feed')}
                 />
               )}
 

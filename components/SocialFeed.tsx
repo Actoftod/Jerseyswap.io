@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageSquare, Star, Bookmark, Share2, MoreHorizontal, Send, CornerDownRight, TrendingUp, Clock, Award, BookmarkCheck, ThumbsUp, X } from 'lucide-react';
-import { SocialSwap, Comment, UserProfile } from '../types';
+import { Heart, MessageSquare, Star, Bookmark, Share2, MoreHorizontal, Send, CornerDownRight, TrendingUp, Clock, Award, BookmarkCheck, ThumbsUp, X, Swords } from 'lucide-react';
+import { SocialSwap, Comment, UserProfile, computeRarity, RARITY_CONFIG } from '../types';
 
 interface SocialFeedProps {
   user: UserProfile;
@@ -13,9 +13,10 @@ interface SocialFeedProps {
   onRate: (id: string, rating: number) => void;
   onFollow: (userId: string) => void;
   onViewProfile: (userId: string) => void;
+  onNominateBattle?: (swap: SocialSwap) => void;
 }
 
-export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onSave, onComment, onRate, onFollow, onViewProfile }) => {
+export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onSave, onComment, onRate, onFollow, onViewProfile, onNominateBattle }) => {
   const [filter, setFilter] = useState<'trending' | 'newest' | 'liked' | 'rated'>('trending');
   const [activeComments, setActiveComments] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<{ swapId: string; commentId: string; userName: string } | null>(null);
@@ -111,10 +112,25 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onS
             <div className="relative aspect-[4/5] bg-zinc-950 flex items-center justify-center group">
               <img src={swap.image} className="w-full h-full object-cover" alt="Swap Visual" onError={handleImageError} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-              <div className="absolute top-4 left-4 z-20 flex gap-2">
+              <div className="absolute top-4 left-4 z-20 flex gap-2 flex-wrap">
                 <div className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
-                   <span className="font-oswald italic text-[9px] font-black text-white tracking-widest uppercase">{swap.sport} // {swap.team}</span>
+                  <span className="font-oswald italic text-[9px] font-black text-white tracking-widest uppercase">{swap.sport} // {swap.team}</span>
                 </div>
+                {(() => {
+                  const tier = swap.rarity ?? computeRarity(swap.rating, swap.ratingCount);
+                  const cfg = RARITY_CONFIG[tier];
+                  if (tier === 'COMMON') return null;
+                  return (
+                    <div
+                      className={`px-3 py-1 rounded-full border backdrop-blur-md ${cfg.border}`}
+                      style={{ backgroundColor: `${cfg.color}18`, boxShadow: `0 0 10px ${cfg.glow}` }}
+                    >
+                      <span className="font-oswald italic font-black text-[9px] uppercase tracking-widest" style={{ color: cfg.color }}>
+                        {cfg.label}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -142,6 +158,16 @@ export const SocialFeed: React.FC<SocialFeedProps> = ({ user, swaps, onLike, onS
                   >
                     <Share2 className="w-6 h-6" />
                   </button>
+                  {onNominateBattle && (
+                    <button
+                      onClick={() => onNominateBattle(swap)}
+                      className="flex items-center gap-1.5 text-white hover:text-orange-400 transition-all"
+                      title="Nominate for Swap Battle"
+                    >
+                      <Swords className="w-5 h-5" />
+                      <span className="font-oswald italic font-black text-[9px] uppercase tracking-widest hidden sm:block">BATTLE</span>
+                    </button>
+                  )}
                 </div>
                 
                 <button 
