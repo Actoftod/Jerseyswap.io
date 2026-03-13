@@ -3,6 +3,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { AppStep, SwapState, UserProfile, SavedSwap, SocialSwap, Comment } from './types';
 import { TEAMS, LEAGUES } from './constants';
 import { GeminiService } from './services/geminiService';
+import { storageService } from './services/storageService';
 import PlayerCard from './components/PlayerCard';
 import PhotoEditor from './components/PhotoEditor';
 import AILab from './components/AILab';
@@ -15,10 +16,21 @@ import { Zap, Cpu, Lock, ChevronRight, Download, Scan, LogIn, UserPlus, Mail, Me
 const STORAGE_ACCOUNTS_KEY = 'js_pro_accounts_v1';
 const SESSION_KEY = 'js_pro_session_v1';
 const SESSION_TIMESTAMP_KEY = 'js_pro_session_ts_v1';
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; 
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 const ADMIN_PW = import.meta.env.VITE_ADMIN_PASSWORD || '';
+
+// --- Auth helpers ---
+async function hashPassword(plain: string): Promise<string> {
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest('SHA-256', enc.encode(plain));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
+  return (await hashPassword(plain)) === hashed;
+}
 
 // Mock Social Data
 const INITIAL_SOCIAL_SWAPS: SocialSwap[] = [
@@ -137,10 +149,12 @@ const App: React.FC = () => {
     }, 800);
   };
 
-  const handleSignIn = () => {
-    if (!authEmail.includes('@')) return showToast('error', 'INVALID_EMAIL');
+  const handleSignIn = async () => {
+    if (!authEmail.trim() || !authEmail.includes('@')) return showToast('error', 'INVALID_EMAIL_FORMAT');
+    if (!authPassword) return showToast('error', 'PASSWORD_REQUIRED');
     setIsAuthLoading(true);
-    setTimeout(() => {
+    try {
+      // Admin shortcut
       if (authEmail === ADMIN_EMAIL && authPassword === ADMIN_PW) {
         let adminProfile = profiles.find(p => p.email === ADMIN_EMAIL);
         if (!adminProfile) {
@@ -150,22 +164,49 @@ const App: React.FC = () => {
         loginProfile(adminProfile);
         return;
       }
-      const found = profiles.find(p => p.email === authEmail && p.password === authPassword);
-      if (found) loginProfile(found);
-      else {
+      const candidate = profiles.find(p => p.email === authEmail);
+      if (!candidate || !candidate.password) {
+        showToast('error', 'AUTH_FAILURE: Account not found');
         setIsAuthLoading(false);
-        showToast('error', 'AUTH_FAILURE');
+        return;
       }
-    }, 1000);
+      const valid = await verifyPassword(authPassword, candidate.password);
+      if (valid) {
+        loginProfile(candidate);
+      } else {
+        showToast('error', 'AUTH_FAILURE: Invalid credentials');
+        setIsAuthLoading(false);
+      }
+    } catch {
+      showToast('error', 'AUTH_SYSTEM_ERROR');
+      setIsAuthLoading(false);
+    }
+  };
+
+  const [generatedOtp, setGeneratedOtp] = useState('');
+
+  const initSignup = () => {
+    if (!authName.trim()) return showToast('error', 'NAME_REQUIRED');
+    if (!authEmail.trim() || !authEmail.includes('@')) return showToast('error', 'INVALID_EMAIL_FORMAT');
+    if (!authHandle.trim()) return showToast('error', 'HANDLE_REQUIRED');
+    if (authPassword.length < 6) return showToast('error', 'PASSWORD_TOO_SHORT: min 6 chars');
+    if (profiles.find(p => p.email === authEmail)) return showToast('error', 'EMAIL_ALREADY_REGISTERED');
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedOtp(otp);
+    // In production this would be emailed — for dev we show it in console
+    console.info(`[JerseySwap OTP] Your verification code: ${otp}`);
+    showToast('success', `OTP_SENT — check console for dev code`);
+    setAuthMode('2fa');
   };
 
   const verify2FA = () => {
-    if (twoFACode === '1234') {
-      setStep('onboarding');
-      setAuthMode('select');
-    } else {
-      showToast('error', 'INVALID_2FA');
+    if (twoFACode.length !== 4) return showToast('error', 'ENTER_4_DIGIT_CODE');
+    if (twoFACode !== generatedOtp) {
+      showToast('error', 'INVALID_2FA_CODE');
+      return;
     }
+    setStep('onboarding');
+    setAuthMode('select');
   };
 
   const logout = () => {
@@ -228,7 +269,10 @@ const App: React.FC = () => {
         geminiService.current.performJerseySwap(state.image, state.team.name, state.number, state.removeBackground, state.customPrompt),
         geminiService.current.generatePlayerStats(state.team.name)
       ]);
-      setResultImage(result);
+      // Persist to storage (falls back to data URL in dev)
+      const swapId = Date.now().toString();
+      const persistedUrl = await storageService.uploadSwap(result, swapId);
+      setResultImage(persistedUrl);
       setPlayerData(stats);
       setStep('result');
       showToast('success', 'NEURAL_FORGE_COMPLETE');
@@ -258,6 +302,30 @@ const App: React.FC = () => {
       setIsSaving(false);
       showToast('success', 'COMMITTED_TO_VAULT');
     }, 800);
+  };
+
+  const handlePublishToFeed = () => {
+    if (!activeProfile || !resultImage || !state.team) return;
+    const newPost: SocialSwap = {
+      id: Date.now().toString(),
+      userId: activeProfile.id,
+      userName: activeProfile.name,
+      userHandle: activeProfile.handle,
+      userAvatar: activeProfile.avatar,
+      image: resultImage,
+      team: state.team.name,
+      sport: state.sportId?.toUpperCase() || 'PRO',
+      likes: 0,
+      rating: 0,
+      ratingCount: 0,
+      timestamp: new Date().toISOString(),
+      comments: [],
+      isSaved: false,
+      hasLiked: false,
+    };
+    setSocialSwaps(prev => [newPost, ...prev]);
+    showToast('success', 'PUBLISHED_TO_FEED');
+    setStep('social-feed');
   };
 
   const handleSocialLike = (id: string) => {
@@ -334,13 +402,14 @@ const App: React.FC = () => {
     }
   };
 
-  const handleOnboardingComplete = (onboardingData: Partial<UserProfile>) => {
+  const handleOnboardingComplete = async (onboardingData: Partial<UserProfile>) => {
+    const hashed = await hashPassword(authPassword);
     const newProfile: UserProfile = {
       id: Date.now().toString(),
       name: authName.toUpperCase(),
       email: authEmail,
-      password: authPassword,
-      handle: authHandle.startsWith('@') ? authHandle : `@${authHandle}`,
+      password: hashed,
+      handle: authHandle.startsWith('@') ? authHandle.toUpperCase() : `@${authHandle.toUpperCase()}`,
       role: onboardingData.role || 'Athlete',
       leaguePreference: onboardingData.leaguePreference || 'Elite',
       bio: onboardingData.bio || '',
@@ -430,7 +499,7 @@ const App: React.FC = () => {
                      <input placeholder="@HANDLE" value={authHandle} onChange={e => setAuthHandle(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
                      <input type="password" placeholder="PASSWORD" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 font-oswald italic text-white" />
                    </div>
-                   <button onClick={() => setAuthMode('2fa')} className="w-full py-5 bg-[#ccff00] text-black font-oswald italic font-black text-xl rounded-2xl">INIT_ONBOARDING</button>
+                   <button onClick={initSignup} className="w-full py-5 bg-[#ccff00] text-black font-oswald italic font-black text-xl rounded-2xl">INIT_ONBOARDING</button>
                    <button onClick={() => setAuthMode('select')} className="w-full py-2 text-zinc-600 font-oswald italic text-[10px] uppercase">BACK</button>
                  </motion.div>
               )}
@@ -554,8 +623,11 @@ const App: React.FC = () => {
                   </motion.div>
                   <div className="w-full max-w-sm space-y-4">
                      <button onClick={() => setShowPlayerCard(true)} className="w-full py-6 bg-[#ccff00] text-black font-oswald italic font-black text-2xl rounded-3xl uppercase">VIEW_PLAYER_CARD</button>
+                     <button onClick={handlePublishToFeed} className="w-full py-6 glass border border-[#ccff00]/30 font-oswald italic font-black text-2xl rounded-3xl uppercase flex items-center justify-center gap-3 text-[#ccff00]">
+                       <Globe className="w-6 h-6" />PUBLISH_TO_FEED
+                     </button>
                      <button onClick={handleSaveToVault} disabled={isSaving} className="w-full py-6 glass font-oswald italic font-black text-2xl rounded-3xl uppercase flex items-center justify-center gap-3">
-                       {isSaving ? <RotateCcw className="w-6 h-6 animate-spin" /> : 'COMMIT_TO_VAULT'}
+                       {isSaving ? <RotateCcw className="w-6 h-6 animate-spin" /> : <><BookmarkCheck className="w-6 h-6" />COMMIT_TO_VAULT</>}
                      </button>
                      <button onClick={reset} className="w-full py-6 border border-white/10 text-zinc-500 font-oswald italic font-black text-2xl rounded-3xl uppercase">NEW_DRAFT</button>
                   </div>
